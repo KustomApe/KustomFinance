@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}明細の処理{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">銀行明細の処理</h1>
+  <div class="flex gap-2"><a class="btn" href="{% url 'banking:rule_list' %}">自動仕訳ルール</a><a class="btn btn-primary" href="{% url 'banking:import' %}">＋ 明細を取り込む</a></div>
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">口座</label><select name="account" class="select"><option value="">すべて</option>
+    {% for a in bank_accounts %}<option value="{{ a.pk }}" {% if request.GET.account == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select></div>
+  <div><label class="mb-1 block">状態</label><select name="status" class="select"><option value="" {% if not status %}selected{% endif %}>すべて</option>
+    {% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  <div><label class="mb-1 block">期間</label><div class="flex items-center gap-1"><input type="date" class="input" name="date_from" value="{{ request.GET.date_from }}">〜<input type="date" class="input" name="date_to" value="{{ request.GET.date_to }}"></div></div>
+  <button class="btn">表示</button>
+</form>
+<p class="mb-2 text-xs text-slate-500">入金は請求書、出金は仕入請求書と金額・振込名義で照合し、消込候補を表示します（振込手数料の差額 1,000円以内を含む）。摘要が自動仕訳ルールに一致する場合はルールの科目で登録できます。</p>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>日付</th><th>摘要</th><th class="text-right">入金</th><th class="text-right">出金</th><th class="text-right">残高</th><th>処理</th></tr></thead>
+    <tbody>
+      {% for row in rows %}{% include "banking/_row.html" %}{% empty %}
+        <tr><td colspan="6" class="py-8 text-center text-slate-500">該当する明細はありません。</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}

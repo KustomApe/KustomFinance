@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}明細の取込{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">銀行明細の取込</h1>
+{% if not has_accounts %}
+  <div class="card card-body mb-4 border-amber-200 bg-amber-50 text-sm text-amber-900">先に<a class="link" href="{% url 'banking:account_new' %}">銀行口座</a>を登録し、明細CSVの形式を選択してください。</div>
+{% endif %}
+<form method="post" enctype="multipart/form-data" class="card card-body mb-6 max-w-2xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" with cols="grid-cols-1" %}
+  <p class="mt-3 text-xs text-slate-500">インターネットバンキングからダウンロードしたCSV（UTF-8 / Shift_JIS）を取り込みます。列の並びは<a class="link" href="{% url 'banking:profile_list' %}">明細CSV形式</a>で設定します。日付は西暦・和暦（R8.10.13 など）に対応。すでに取り込んだ明細は自動でスキップします。</p>
+  <div class="mt-4"><button class="btn btn-primary">取り込む</button></div>
+</form>
+<h2 class="mb-2 font-semibold">取込履歴</h2>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>日時</th><th>口座</th><th>ファイル</th><th class="text-right">取込</th><th class="text-right">重複</th><th>実行者</th></tr></thead>
+    <tbody>{% for b in batches %}<tr><td>{{ b.created_at|date:"Y/m/d H:i" }}</td><td>{{ b.bank_account }}</td><td>{{ b.file_name }}</td><td class="num">{{ b.imported }}</td><td class="num">{{ b.skipped }}</td><td>{{ b.created_by|default:"" }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="text-slate-500">取込履歴はありません。</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

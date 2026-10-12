@@ -1,0 +1,37 @@
+{% load ui %}{% with tx=row.tx %}
+<tr id="tx-{{ tx.pk }}" class="{% if tx.status != 'unprocessed' %}bg-slate-50/60 text-slate-500{% endif %}">
+  <td class="whitespace-nowrap">{{ tx.date|date:"Y/m/d" }}</td>
+  <td>{{ tx.description }}<div class="text-xs text-slate-400">{{ tx.bank_account }}</div></td>
+  <td class="num text-emerald-700">{% if tx.deposit %}{{ tx.deposit|yen }}{% endif %}</td>
+  <td class="num text-red-700">{% if tx.withdrawal %}{{ tx.withdrawal|yen }}{% endif %}</td>
+  <td class="num">{{ tx.balance|yen }}</td>
+  <td class="min-w-96 text-sm">
+    {% if row.error %}<div class="mb-1 rounded bg-red-50 px-2 py-1 text-xs text-red-700">{{ row.error }}</div>{% endif %}
+    {% if tx.status == "done" %}
+      <span class="badge badge-green">処理済</span> {% if tx.journal %}<a class="link" href="{% url 'ledger:journal_detail' tx.journal_id %}">{{ tx.journal.number }}</a> {{ tx.journal.description|truncatechars:30 }}{% endif %}
+    {% elif tx.status == "ignored" %}
+      <span class="badge badge-gray">対象外</span> {{ tx.note }}
+      {% if request.user|can:"ledger_edit" %}<form class="inline" hx-post="{% url 'banking:transaction_action' tx.pk %}" hx-target="closest tr" hx-swap="outerHTML"><input type="hidden" name="action" value="reopen"><button class="link text-xs">未処理に戻す</button></form>{% endif %}
+    {% elif request.user|can:"ledger_edit" %}
+      <div class="flex flex-col items-start gap-1">
+        {% for c in row.candidates %}
+          <form hx-post="{% url 'banking:transaction_action' tx.pk %}" hx-target="closest tr" hx-swap="outerHTML">
+            <input type="hidden" name="action" value="match"><input type="hidden" name="document" value="{{ c.document.pk }}">
+            <button class="btn btn-sm {% if forloop.first %}btn-primary{% endif %}">消込: {{ c.document.number }} {{ c.document.partner.name }} {{ c.outstanding|yen }}{% if c.fee %}（手数料 {{ c.fee|yen }}）{% endif %}{% if c.name_match %} ✓名義一致{% endif %}</button>
+          </form>
+        {% endfor %}
+        {% if row.rule %}
+          <form hx-post="{% url 'banking:transaction_action' tx.pk %}" hx-target="closest tr" hx-swap="outerHTML">
+            <input type="hidden" name="action" value="rule"><input type="hidden" name="rule" value="{{ row.rule.pk }}">
+            <button class="btn btn-sm {% if not row.candidates %}btn-primary{% endif %}">ルール: {{ row.rule.account.name }}{% if row.rule.tax_category %}（{{ row.rule.tax_category }}）{% endif %}で登録</button>
+          </form>
+        {% endif %}
+        <details class="w-full" hx-get="{% url 'banking:manual_form' tx.pk %}" hx-trigger="toggle once" hx-target="find .manual">
+          <summary class="cursor-pointer text-xs text-brand-600">科目を指定して仕訳 / 対象外にする</summary>
+          <div class="manual mt-1 text-xs text-slate-400">読み込み中…</div>
+        </details>
+      </div>
+    {% else %}<span class="badge badge-yellow">未処理</span>{% endif %}
+  </td>
+</tr>
+{% endwith %}

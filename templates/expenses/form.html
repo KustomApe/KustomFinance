@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}経費精算{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">経費精算{% if claim.pk %}の編集{% if claim.number %} {{ claim.number }}{% endif %}{% else %}の申請{% endif %}</h1>
+{% if claim.status == "rejected" %}<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">差し戻されました。理由: {{ claim.reject_reason }}</div>{% endif %}
+{{ account_taxes|json_script:"account-taxes" }}
+<form method="post" enctype="multipart/form-data" class="space-y-4"
+      x-data="{ taxes: JSON.parse(document.getElementById('account-taxes').textContent) }"
+      @change="if ($event.target.name.endsWith('-account')) { const t = $event.target.name.replace('-account', '-tax_category'); const el = document.querySelector(`[name='${t}']`); const v = taxes[$event.target.value]; if (el && v && [...el.options].some(o => o.value == v)) el.value = v; }">
+  {% csrf_token %}
+  <div class="card card-body">{% include "components/form_fields.html" with cols="sm:grid-cols-3" %}</div>
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<div class="text-sm text-red-700">{{ formset.non_form_errors }}</div>{% endif %}
+  <div class="space-y-3">
+    {% for f in formset %}
+      <div class="card card-body">
+        {{ f.id }}
+        <div class="mb-2 flex items-center justify-between text-sm"><span class="font-semibold text-slate-600">明細 {{ forloop.counter }}</span>
+          {% if f.instance.pk %}<label class="flex items-center gap-1 text-slate-500">{{ f.DELETE }} 削除</label>{% endif %}</div>
+        {% if f.non_field_errors %}<div class="mb-2 text-sm text-red-700">{{ f.non_field_errors }}</div>{% endif %}
+        <div class="grid gap-3 sm:grid-cols-6">
+          <div><label class="mb-1 block text-xs">利用日</label>{{ f.date }}{{ f.date.errors }}</div>
+          <div class="sm:col-span-2"><label class="mb-1 block text-xs">勘定科目</label>{{ f.account }}{{ f.account.errors }}</div>
+          <div class="sm:col-span-2"><label class="mb-1 block text-xs">税区分</label>{{ f.tax_category }}{{ f.tax_category.errors }}</div>
+          <div><label class="mb-1 block text-xs">金額（税込）</label>{{ f.amount }}{{ f.amount.errors }}</div>
+          <div class="sm:col-span-2"><label class="mb-1 block text-xs">支払先</label>{{ f.payee }}{{ f.payee.errors }}</div>
+          <div class="sm:col-span-2"><label class="mb-1 block text-xs">内容</label>{{ f.description }}{{ f.description.errors }}</div>
+          <div class="sm:col-span-2"><label class="mb-1 block text-xs">支払先の登録番号</label>{{ f.payee_registration_number }}{{ f.payee_registration_number.errors }}</div>
+          <div class="sm:col-span-3"><label class="mb-1 block text-xs">領収書{% if f.instance.pk and f.instance.receipt %}（登録済: <a class="link" href="{% url 'expenses:receipt' f.instance.pk %}" target="_blank">表示</a>）{% endif %}</label>{{ f.receipt }}</div>
+          <div class="flex items-center gap-2 pt-5 sm:col-span-3">{{ f.invoice_exempt }}<label for="{{ f.invoice_exempt.id_for_label }}" class="text-xs">インボイス不要の特例（公共交通機関・出張旅費・自動販売機など）</label></div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <p class="text-xs text-slate-500">明細が足りない場合は、下書き保存すると入力欄が追加されます。登録番号のない領収書（特例を除く）は、経過措置により消費税の一部のみ控除されます。</p>
+  <div class="flex gap-2">
+    <button class="btn">下書き保存</button>
+    <button class="btn btn-primary" name="submit">申請する</button>
+    <a class="btn" href="{% if claim.pk %}{% url 'expenses:detail' claim.pk %}{% else %}{% url 'expenses:list' %}{% endif %}">キャンセル</a>
+  </div>
+</form>
+{% endblock %}

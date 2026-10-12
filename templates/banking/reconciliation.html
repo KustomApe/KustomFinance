@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}残高照合{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">口座残高の照合</h1>
+<form class="card card-body mb-4 flex items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">基準日</label><input type="date" class="input" name="as_of" value="{{ as_of|date:'Y-m-d' }}"></div>
+  <button class="btn">表示</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>口座</th><th>勘定科目</th><th class="text-right">通帳残高</th><th>通帳の日付</th><th class="text-right">帳簿残高</th><th class="text-right">差額</th><th class="text-right">未処理明細</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+        <tr><td>{{ r.bank.name }}</td><td>{{ r.bank.account.name }}{% if r.bank.sub_account %} / {{ r.bank.sub_account.name }}{% endif %}</td>
+          <td class="num">{% if r.statement_balance is not None %}{{ r.statement_balance|yen }}{% else %}-{% endif %}</td>
+          <td>{{ r.statement_date|date:"Y/m/d"|default:"-" }}</td>
+          <td class="num">{{ r.book_balance|yen }}</td>
+          <td class="num {% if r.difference %}font-semibold text-red-700{% endif %}">{% if r.difference is not None %}{% if r.difference %}{{ r.difference|yen }}{% else %}<span class="badge badge-green">一致</span>{% endif %}{% else %}-{% endif %}</td>
+          <td class="num">{% if r.unprocessed %}<a class="link" href="{% url 'banking:transactions' %}?account={{ r.bank.pk }}">{{ r.unprocessed }}件</a>{% else %}0{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="7" class="py-8 text-center text-slate-500">銀行口座が登録されていません。</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="mt-2 text-xs text-slate-500">通帳残高は取込明細の残高列の最新値です。複数の口座で同じ勘定科目を使う場合は、口座ごとに補助科目を設定すると正しく照合できます。</p>
+{% endblock %}

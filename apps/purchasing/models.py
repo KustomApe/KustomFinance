@@ -92,7 +92,7 @@ class Bill(TradeDocument):
 
     def save(self, *args, **kwargs):
         if self.attachment and not self.attachment._committed:
-            from .services import file_sha256
+            from apps.core.files import file_sha256
 
             self.attachment_sha256 = file_sha256(self.attachment)
         elif not self.attachment:

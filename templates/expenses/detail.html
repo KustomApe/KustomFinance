@@ -1,0 +1,71 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}経費精算 {{ claim.number|default:"下書き" }}{% endblock %}
+{% block content %}
+{% with c=claim %}
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="page-title">経費精算 {{ c.number|default:"（下書き）" }} {% include "expenses/status.html" %}</h1>
+    <p class="mt-1 text-sm text-slate-500">申請者: {{ c.applicant }}{% if c.submitted_at %} ／ 申請: {{ c.submitted_at|date:"Y/m/d H:i" }}{% endif %}{% if c.approved_at %} ／ 承認: {{ c.approved_at|date:"Y/m/d H:i" }} {{ c.approver }}{% endif %}</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn" href="{% url 'expenses:list' %}">一覧へ</a>
+    {% if is_owner and c.is_editable %}
+      <a class="btn" href="{% url 'expenses:edit' c.pk %}">編集</a>
+      {% if c.status == "draft" and not c.number %}<form method="post" onsubmit="return confirm('下書きを削除しますか？')">{% csrf_token %}<button class="btn" name="action" value="delete">削除</button></form>{% endif %}
+      <form method="post">{% csrf_token %}<button class="btn btn-primary" name="action" value="submit">申請する</button></form>
+    {% endif %}
+  </div>
+</div>
+{% if c.status == "rejected" %}<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">差戻し理由: {{ c.reject_reason }}</div>{% endif %}
+<div class="card card-body mb-4 grid gap-3 text-sm sm:grid-cols-4">
+  <div class="sm:col-span-2"><div class="text-slate-500">件名</div><div class="font-medium">{{ c.title }}</div></div>
+  <div><div class="text-slate-500">部門 / プロジェクト</div><div>{{ c.department|default:"-" }} / {{ c.project|default:"-" }}</div></div>
+  <div><div class="text-slate-500">合計</div><div class="text-xl font-bold">{{ c.total|yen }}円</div></div>
+  {% if c.journal %}<div><div class="text-slate-500">計上仕訳</div><a class="link" href="{% url 'ledger:journal_detail' c.journal_id %}">{{ c.journal.number }}</a></div>{% endif %}
+  {% if c.payment_journal %}<div><div class="text-slate-500">精算仕訳（{{ c.paid_date|date:"Y/m/d" }}）</div><a class="link" href="{% url 'ledger:journal_detail' c.payment_journal_id %}">{{ c.payment_journal.number }}</a></div>{% endif %}
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>利用日</th><th>支払先</th><th>内容</th><th>勘定科目</th><th>税区分</th><th class="text-right">金額</th><th>領収書</th></tr></thead>
+    <tbody>
+      {% for ln in lines %}
+        <tr>
+          <td>{{ ln.date|date:"Y/m/d" }}</td>
+          <td>{{ ln.payee }}{% if ln.payee_registration_number %}<div class="text-xs text-slate-500">{{ ln.payee_registration_number }}</div>{% endif %}</td>
+          <td>{{ ln.description }}</td><td>{{ ln.account.name }}</td>
+          <td>{{ ln.effective_tax }}{% if ln.effective_tax != ln.tax_category %}<div class="text-xs text-amber-700">登録番号なし→経過措置</div>{% endif %}{% if ln.invoice_exempt %}<div class="text-xs text-slate-500">特例</div>{% endif %}</td>
+          <td class="num">{{ ln.amount|yen }}</td>
+          <td>{% if ln.receipt %}<a class="link" href="{% url 'expenses:receipt' ln.pk %}" target="_blank">表示</a>{% else %}<span class="text-xs text-red-600">なし</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if request.user|can:"ledger_edit" %}
+  {% if c.status == "submitted" %}
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
+      <form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="approve">
+        <h2 class="mb-3 font-semibold">承認</h2>
+        {% include "components/form_fields.html" with form=approve_form cols="grid-cols-1" %}
+        <p class="mt-2 text-xs text-slate-500">承認すると「各経費科目・仮払消費税 / 未払金」が計上されます。</p>
+        <button class="btn btn-primary mt-3">承認する</button></form>
+      <form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="reject">
+        <h2 class="mb-3 font-semibold">差戻し</h2>
+        <input class="input" name="reason" required maxlength="200" placeholder="差戻し理由">
+        <button class="btn btn-danger mt-3">差し戻す</button></form>
+    </div>
+  {% elif c.status == "approved" %}
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
+      <form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="pay">
+        <h2 class="mb-3 font-semibold">精算（立替金の支払）</h2>
+        {% include "components/form_fields.html" with form=pay_form cols="grid-cols-1" %}
+        <button class="btn btn-primary mt-3">精算する</button></form>
+      <form method="post" class="card card-body">{% csrf_token %}<input type="hidden" name="action" value="cancel">
+        <h2 class="mb-3 font-semibold">承認の取消</h2>
+        <input class="input" name="reason" required maxlength="200" placeholder="取消理由">
+        <button class="btn btn-danger mt-3">取り消す</button></form>
+    </div>
+  {% endif %}
+{% endif %}
+{% endwith %}
+{% endblock %}

@@ -1,9 +1,10 @@
 {% extends "base.html" %}{% load ui %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
+{% with cap=edit_cap|default:"sales_edit" %}{% with can_edit=request.user|can:cap %}
 <div class="mb-6 flex items-center justify-between">
   <h1 class="page-title">{{ title }}</h1>
-  {% if request.user|can:"sales_edit" %}<a class="btn btn-primary" href="{{ new_url }}">＋ 新規登録</a>{% endif %}
+  {% if can_edit %}<a class="btn btn-primary" href="{{ new_url }}">＋ 新規登録</a>{% endif %}
 </div>
 <form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
   <div><label class="mb-1 block">キーワード</label><input class="input" name="q" value="{{ request.GET.q }}" placeholder="コード・名称"></div>
@@ -21,10 +22,11 @@
     <tbody>
       {% for row in rows %}
         <tr>{% for f, v in row.cells %}<td class="{% if f.get_internal_type == 'DecimalField' %}num{% endif %}">{{ v|cell }}</td>{% endfor %}
-          <td class="text-right">{% if request.user|can:"sales_edit" %}<a class="link" href="{{ row.url }}">編集</a>{% endif %}</td></tr>
+          <td class="text-right">{% if can_edit %}<a class="link" href="{{ row.url }}">編集</a>{% endif %}</td></tr>
       {% empty %}<tr><td colspan="{{ headers|length|add:1 }}" class="py-8 text-center text-slate-500">登録されていません。</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
 {% include "components/pagination.html" %}
+{% endwith %}{% endwith %}
 {% endblock %}

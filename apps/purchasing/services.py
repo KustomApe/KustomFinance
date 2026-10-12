@@ -1,5 +1,4 @@
 import datetime
-import hashlib
 from collections import defaultdict
 from decimal import Decimal
 
@@ -32,15 +31,6 @@ def purchase_tax_code(rate: str, qualified: bool, date: datetime.date) -> str:
     if date <= TRANSITION_50_UNTIL:
         return f"{base}-50"
     return f"{base}-0"
-
-
-def file_sha256(field_file) -> str:
-    digest = hashlib.sha256()
-    field_file.open("rb")
-    for chunk in field_file.chunks():
-        digest.update(chunk)
-    field_file.seek(0)
-    return digest.hexdigest()
 
 
 def post_bill(bill: Bill, user) -> None:

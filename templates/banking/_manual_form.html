@@ -1,0 +1,16 @@
+<form class="grid grid-cols-2 gap-1" hx-post="{% url 'banking:transaction_action' tx.pk %}" hx-target="#tx-{{ tx.pk }}" hx-swap="outerHTML">
+  <input type="hidden" name="action" value="post">
+  <select name="account" class="select text-xs" required><option value="">相手科目</option>
+    {% for a in accounts %}<option value="{{ a.pk }}">{{ a.code }} {{ a.name }}</option>{% endfor %}</select>
+  <select name="tax_category" class="select text-xs"><option value="">税区分</option>
+    {% for t in taxes %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}</select>
+  <select name="partner" class="select text-xs"><option value="">取引先（任意）</option>
+    {% for p in partners %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}</select>
+  <input class="input text-xs" name="description" placeholder="摘要（空欄なら明細の摘要）">
+  <button class="btn btn-sm btn-primary col-span-2 justify-center">仕訳を登録</button>
+</form>
+<form class="mt-1 flex gap-1" hx-post="{% url 'banking:transaction_action' tx.pk %}" hx-target="#tx-{{ tx.pk }}" hx-swap="outerHTML">
+  <input type="hidden" name="action" value="ignore">
+  <input class="input text-xs" name="note" placeholder="対象外の理由（例: 口座間振替で仕訳済）">
+  <button class="btn btn-sm whitespace-nowrap">対象外</button>
+</form>

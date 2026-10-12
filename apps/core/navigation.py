@@ -34,6 +34,15 @@ NAV = [
         ],
     },
     {
+        "title": "経費・銀行",
+        "items": [
+            {"label": "経費精算", "url": "expenses:list", "cap": roles.VIEW},
+            {"label": "銀行明細の処理", "url": "banking:transactions", "cap": roles.VIEW},
+            {"label": "明細の取込", "url": "banking:import", "cap": roles.LEDGER_EDIT},
+            {"label": "残高照合", "url": "banking:reconciliation", "cap": roles.VIEW},
+        ],
+    },
+    {
         "title": "会計",
         "items": [
             {"label": "仕訳入力", "url": "ledger:journal_new", "cap": roles.LEDGER_EDIT},
@@ -50,6 +59,9 @@ NAV = [
             {"label": "品目", "url": "masters:item_list", "cap": roles.VIEW},
             {"label": "部門", "url": "masters:department_list", "cap": roles.VIEW},
             {"label": "プロジェクト", "url": "masters:project_list", "cap": roles.VIEW},
+            {"label": "銀行口座", "url": "banking:account_list", "cap": roles.VIEW},
+            {"label": "自動仕訳ルール", "url": "banking:rule_list", "cap": roles.VIEW},
+            {"label": "明細CSV形式", "url": "banking:profile_list", "cap": roles.VIEW},
         ],
     },
     {

@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}経費精算{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">経費精算</h1>
+  {% if request.user|can:"expense_submit" %}<a class="btn btn-primary" href="{% url 'expenses:new' %}">＋ 新規申請</a>{% endif %}
+</div>
+<div class="mb-4 flex gap-1 border-b border-slate-200 text-sm">
+  <a href="?tab=mine" class="px-4 py-2 {% if tab == 'mine' %}border-b-2 border-brand-600 font-semibold text-brand-700{% else %}text-slate-500{% endif %}">自分の申請</a>
+  {% if request.user|can:"ledger_edit" %}
+    <a href="?tab=approval" class="px-4 py-2 {% if tab == 'approval' %}border-b-2 border-brand-600 font-semibold text-brand-700{% else %}text-slate-500{% endif %}">承認待ち{% if approval_count %} <span class="badge badge-yellow">{{ approval_count }}</span>{% endif %}</a>
+    <a href="?tab=unpaid" class="px-4 py-2 {% if tab == 'unpaid' %}border-b-2 border-brand-600 font-semibold text-brand-700{% else %}text-slate-500{% endif %}">未精算</a>
+    <a href="?tab=all" class="px-4 py-2 {% if tab == 'all' %}border-b-2 border-brand-600 font-semibold text-brand-700{% else %}text-slate-500{% endif %}">すべて</a>
+  {% endif %}
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>申請番号</th><th>件名</th><th>申請者</th><th>申請日</th><th class="text-right">合計</th><th>状態</th></tr></thead>
+    <tbody>
+      {% for c in page %}
+        <tr><td><a class="link" href="{% url 'expenses:detail' c.pk %}">{{ c.number|default:"（下書き）" }}</a></td><td>{{ c.title }}</td>
+          <td>{{ c.applicant }}</td><td>{{ c.submitted_at|date:"Y/m/d"|default:"-" }}</td><td class="num">{{ c.total|yen }}</td>
+          <td>{% include "expenses/status.html" %}</td></tr>
+      {% empty %}<tr><td colspan="6" class="py-8 text-center text-slate-500">申請はありません。</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}
