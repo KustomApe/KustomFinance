@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}勘定科目{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">{% if object %}勘定科目の編集: {{ object.name }}{% else %}勘定科目の追加{% endif %}</h1>
+<form method="post" class="card card-body max-w-2xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" %}
+  <div class="mt-6 flex gap-2"><button class="btn btn-primary">保存</button><a class="btn" href="{% url 'ledger:accounts' %}">戻る</a></div>
+</form>
+{% if object %}
+  <div class="card mt-6 max-w-2xl">
+    <div class="card-body">
+      <h2 class="mb-3 font-semibold">補助科目</h2>
+      <table class="table mb-4">
+        <thead><tr><th>コード</th><th>名称</th><th>状態</th><th></th></tr></thead>
+        <tbody>
+          {% for s in sub_accounts %}
+            <tr class="{% if not s.is_active %}text-slate-400{% endif %}">
+              <td>{{ s.code }}</td><td>{{ s.name }}</td>
+              <td>{% if s.is_active %}<span class="badge badge-green">有効</span>{% else %}<span class="badge badge-gray">無効</span>{% endif %}</td>
+              <td class="text-right"><form method="post" action="{% url 'ledger:sub_account_toggle' s.pk %}">{% csrf_token %}<button class="link text-xs">{% if s.is_active %}無効にする{% else %}有効にする{% endif %}</button></form></td>
+            </tr>
+          {% empty %}<tr><td colspan="4" class="text-slate-500">補助科目はありません。</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      <form method="post" class="flex items-end gap-2">
+        {% csrf_token %}
+        <div class="w-28"><label class="mb-1 block text-sm">コード</label>{{ sub_form.code }}</div>
+        <div class="flex-1"><label class="mb-1 block text-sm">名称</label>{{ sub_form.name }}{{ sub_form.name.errors }}</div>
+        <button class="btn" name="add_sub">追加</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

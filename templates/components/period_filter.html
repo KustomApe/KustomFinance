@@ -1,0 +1,4 @@
+<div><label class="mb-1 block" for="id_date_from">期間</label>
+  <div class="flex items-center gap-1">{{ period_form.date_from }}〜{{ period_form.date_to }}</div>
+  {% if period_form.non_field_errors %}<p class="errorlist">{{ period_form.non_field_errors.0 }}</p>{% endif %}
+</div>

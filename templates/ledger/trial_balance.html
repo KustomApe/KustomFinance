@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}試算表{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">残高試算表</h1>
+  <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm print:hidden" method="get">
+  {% include "components/period_filter.html" %}
+  <button class="btn">表示</button>
+</form>
+<p class="mb-2 text-sm text-slate-500">{{ tb.date_from|date:"Y/m/d" }} 〜 {{ tb.date_to|date:"Y/m/d" }}（貸借対照表科目は累計、損益科目は期首からの累計。前期以前の損益は繰越利益剰余金に含めています）</p>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>勘定科目</th><th class="text-right">期首・繰越残高</th><th class="text-right">借方</th><th class="text-right">貸方</th><th class="text-right">期末残高</th></tr></thead>
+    {% for g in tb.groups %}
+      <tbody>
+        <tr class="bg-slate-50/60"><td colspan="5" class="font-semibold text-slate-700">{{ g.label }}</td></tr>
+        {% for r in g.rows %}
+          <tr>
+            <td class="pl-6"><a class="link" href="{% url 'ledger:general_ledger' %}?account={{ r.account.pk }}&date_from={{ tb.date_from|date:'Y-m-d' }}&date_to={{ tb.date_to|date:'Y-m-d' }}">{{ r.account.code }} {{ r.account.name }}</a></td>
+            <td class="num">{{ r.opening|yen }}</td><td class="num">{{ r.debit|yen }}</td><td class="num">{{ r.credit|yen }}</td><td class="num font-medium">{{ r.closing|yen }}</td>
+          </tr>
+        {% endfor %}
+        <tr class="font-semibold"><td class="pl-6 text-slate-600">{{ g.label }} 計</td>
+          <td class="num">{{ g.opening|yen }}</td><td class="num">{{ g.debit|yen }}</td><td class="num">{{ g.credit|yen }}</td><td class="num">{{ g.closing|yen }}</td></tr>
+      </tbody>
+    {% empty %}
+      <tbody><tr><td colspan="5" class="py-8 text-center text-slate-500">対象期間の仕訳がありません。</td></tr></tbody>
+    {% endfor %}
+    <tfoot>
+      <tr class="border-t-2 border-slate-300 font-bold"><td>合計</td><td></td><td class="num">{{ tb.total_debit|yen }}</td><td class="num">{{ tb.total_credit|yen }}</td><td></td></tr>
+    </tfoot>
+  </table>
+</div>
+{% endblock %}

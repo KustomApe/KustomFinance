@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}勘定科目{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">勘定科目</h1>
+  {% if request.user|can:"ledger_edit" %}<a class="btn btn-primary" href="{% url 'ledger:account_new' %}">＋ 科目を追加</a>{% endif %}
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>コード</th><th>科目名</th><th>既定の税区分</th><th>補助科目</th><th>状態</th><th></th></tr></thead>
+    {% for label, accounts in groups %}
+      <tbody>
+        <tr class="bg-slate-50/60"><td colspan="6" class="font-semibold text-slate-700">{{ label }}</td></tr>
+        {% for a in accounts %}
+          <tr class="{% if not a.is_active %}text-slate-400{% endif %}">
+            <td>{{ a.code }}</td><td>{{ a.name }}{% if a.system_key %} <span class="badge badge-gray" title="システムで使用">システム</span>{% endif %}</td>
+            <td>{{ a.default_tax_category|default:"" }}</td>
+            <td class="text-xs">{% for s in a.sub_accounts.all %}{{ s.name }}{% if not forloop.last %}、{% endif %}{% endfor %}</td>
+            <td>{% if a.is_active %}<span class="badge badge-green">有効</span>{% else %}<span class="badge badge-gray">無効</span>{% endif %}</td>
+            <td class="text-right">{% if request.user|can:"ledger_edit" %}<a class="link" href="{% url 'ledger:account_edit' a.pk %}">編集</a>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

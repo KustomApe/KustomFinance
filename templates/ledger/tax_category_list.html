@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}税区分{% endblock %}
+{% block content %}
+<h1 class="page-title mb-2">税区分</h1>
+<p class="mb-4 text-sm text-slate-500">経過措置：適格請求書発行事業者以外からの仕入は、2026年9月30日までは80%、2026年10月1日〜2029年9月30日は50%を控除できます。</p>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>コード</th><th>名称</th><th>種類</th><th class="text-right">税率</th><th class="text-right">控除割合</th></tr></thead>
+    <tbody>
+      {% for t in taxes %}
+        <tr><td>{{ t.code }}</td><td>{{ t.name }}</td><td>{{ t.get_kind_display }}</td>
+          <td class="num">{% if t.rate %}{{ t.rate }}%{% if t.is_reduced %}（軽減）{% endif %}{% endif %}</td>
+          <td class="num">{% if t.kind == "taxable_purchase" %}{{ t.deductible_percent }}%{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

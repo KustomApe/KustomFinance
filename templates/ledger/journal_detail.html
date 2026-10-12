@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}仕訳 {{ journal.number }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <h1 class="page-title">仕訳 {{ journal.number }}
+      {% if journal.is_reversed %}<span class="badge badge-red align-middle">取消済</span>{% endif %}
+      {% if journal.source != "manual" %}<span class="badge badge-blue align-middle">{{ journal.get_source_display }}</span>{% endif %}
+    </h1>
+    <p class="mt-1 text-sm text-slate-500">登録: {{ journal.created_at|date:"Y/m/d H:i" }} {{ journal.created_by|default:"" }}</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn" href="{% url 'ledger:journals' %}">仕訳帳へ</a>
+    {% if request.user|can:"ledger_edit" %}<a class="btn" href="{% url 'ledger:journal_new' %}?copy={{ journal.pk }}">複製して新規作成</a>{% endif %}
+  </div>
+</div>
+{% if journal.reverses %}
+  <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+    この仕訳は <a class="link" href="{% url 'ledger:journal_detail' journal.reverses.pk %}">{{ journal.reverses.number }}</a> の取消仕訳です。</div>
+{% endif %}
+{% if journal.is_reversed %}
+  <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+    この仕訳は <a class="link" href="{% url 'ledger:journal_detail' journal.reversed_by.pk %}">{{ journal.reversed_by.number }}</a> で取り消されています。</div>
+{% endif %}
+<div class="card card-body mb-4 grid gap-4 text-sm sm:grid-cols-3">
+  <div><div class="text-slate-500">取引日</div><div class="font-medium">{{ journal.date|date:"Y/m/d" }}</div></div>
+  <div class="sm:col-span-2"><div class="text-slate-500">摘要</div><div class="font-medium">{{ journal.description|default:"-" }}</div></div>
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>#</th><th>貸借</th><th>勘定科目</th><th>補助科目</th><th>税区分</th><th class="text-right">借方</th><th class="text-right">貸方</th><th>摘要</th></tr></thead>
+    <tbody>
+      {% for ln in journal.lines.all %}
+        <tr class="{% if ln.tax_base_id %}text-slate-500{% endif %}">
+          <td>{{ ln.line_no }}</td><td>{{ ln.get_side_display }}</td>
+          <td>{{ ln.account.code }} {{ ln.account.name }}</td><td>{{ ln.sub_account.name|default:"" }}</td>
+          <td>{{ ln.tax_category|default:"" }}{% if ln.tax_amount %}<div class="text-xs text-slate-500">税額 {{ ln.tax_amount|yen }}</div>{% endif %}</td>
+          <td class="num">{% if ln.side == "D" %}{{ ln.amount|yen }}{% endif %}</td>
+          <td class="num">{% if ln.side == "C" %}{{ ln.amount|yen }}{% endif %}</td>
+          <td>{{ ln.description }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr class="font-semibold"><td colspan="5" class="text-right">合計</td><td class="num">{{ journal.total|yen }}</td><td class="num">{{ journal.total|yen }}</td><td></td></tr></tfoot>
+  </table>
+</div>
+{% if request.user|can:"ledger_edit" and not journal.is_reversed and not journal.reverses %}
+  <form method="post" class="card card-body mt-6 max-w-2xl" x-data="{ open: {% if reverse_form.errors %}true{% else %}false{% endif %} }">
+    {% csrf_token %}
+    <button type="button" class="link text-sm" @click="open = !open">この仕訳を取り消す（取消仕訳を登録）</button>
+    <div x-show="open" x-cloak class="mt-4">
+      <p class="mb-4 text-sm text-slate-600">登録済みの仕訳は変更・削除できません。貸借を反転した取消仕訳を登録し、必要なら正しい仕訳を新たに登録してください。</p>
+      {% include "components/form_fields.html" with form=reverse_form %}
+      <div class="mt-4"><button class="btn btn-danger">取消仕訳を登録</button></div>
+    </div>
+  </form>
+{% endif %}
+{% endblock %}

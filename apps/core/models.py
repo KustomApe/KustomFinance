@@ -56,6 +56,9 @@ class Company(AuditedModel, TimeStampedModel):
         "振込先（請求書に印字）", blank=True, help_text="例: ○○銀行 △△支店 普通 1234567 カ）ジシャ"
     )
     seal_image = models.ImageField("角印画像", upload_to="company/", blank=True)
+    books_locked_through = models.DateField(
+        "月次締め日", null=True, blank=True, help_text="この日以前の日付では仕訳を登録できません。"
+    )
 
     class Meta:
         verbose_name = "自社情報"

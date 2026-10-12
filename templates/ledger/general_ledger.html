@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}総勘定元帳{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">総勘定元帳：{{ account.name }}{% if sub_account %} / {{ sub_account.name }}{% endif %}</h1>
+  <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">勘定科目</label>
+    <select name="account" class="select" onchange="this.form.sub_account && (this.form.sub_account.value = ''); this.form.submit()">
+      {% for a in accounts %}<option value="{{ a.pk }}" {% if a == account %}selected{% endif %}>{{ a.code }} {{ a.name }}</option>{% endfor %}
+    </select></div>
+  {% if account.sub_accounts.exists %}
+    <div><label class="mb-1 block">補助科目</label>
+      <select name="sub_account" class="select"><option value="">すべて</option>
+        {% for s in account.sub_accounts.all %}<option value="{{ s.pk }}" {% if s == sub_account %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+      </select></div>
+  {% endif %}
+  {% include "components/period_filter.html" %}
+  <button class="btn">表示</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>日付</th><th>仕訳番号</th><th>相手科目</th><th>摘要</th><th class="text-right">借方</th><th class="text-right">貸方</th><th class="text-right">残高</th></tr></thead>
+    <tbody>
+      <tr class="text-slate-600"><td colspan="6">前期・前月繰越</td><td class="num">{{ opening|yen }}</td></tr>
+      {% for e in entries %}
+        <tr>
+          <td class="whitespace-nowrap">{{ e.line.journal.date|date:"Y/m/d" }}</td>
+          <td class="whitespace-nowrap"><a class="link" href="{% url 'ledger:journal_detail' e.line.journal_id %}">{{ e.line.journal.number }}</a></td>
+          <td>{{ e.counterpart }}</td><td>{{ e.line.description }}</td>
+          <td class="num">{{ e.debit|yen }}</td><td class="num">{{ e.credit|yen }}</td><td class="num">{{ e.balance|yen }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr class="font-semibold"><td colspan="4" class="text-right">期間合計 / 残高</td><td class="num">{{ total_debit|yen }}</td><td class="num">{{ total_credit|yen }}</td><td class="num">{{ closing|yen }}</td></tr></tfoot>
+  </table>
+</div>
+{% endblock %}

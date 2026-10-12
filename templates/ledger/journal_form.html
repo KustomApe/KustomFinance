@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}仕訳入力{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">仕訳入力</h1>
+  <a class="link text-sm" href="{% url 'ledger:journals' %}">仕訳帳へ</a>
+</div>
+{{ options|json_script:"entry-options" }}
+{{ rows_json|json_script:"entry-rows" }}
+<script>
+  window.journalEntry = function () {
+    const opts = JSON.parse(document.getElementById("entry-options").textContent);
+    const initial = JSON.parse(document.getElementById("entry-rows").textContent);
+    const fields = ["debit_account", "debit_sub_account", "debit_tax_category", "debit_amount",
+                    "credit_account", "credit_sub_account", "credit_tax_category", "credit_amount", "description"];
+    let seq = 0;
+    const blank = (r = {}) => Object.fromEntries([["key", ++seq], ...fields.map(f => [f, r[f] ?? ""])]);
+    const groups = [];
+    for (const a of opts.accounts) {
+      let g = groups.find(g => g.label === a.section);
+      if (!g) groups.push(g = { label: a.section, accounts: [] });
+      g.accounts.push(a);
+    }
+    const num = v => parseInt(String(v).replace(/,/g, ""), 10) || 0;
+    return {
+      opts, groups, rows: initial.map(blank),
+      subsFor(accountId) { return opts.subAccounts.filter(s => String(s.account) === String(accountId)); },
+      accountChanged(row, side) {
+        const a = opts.accounts.find(a => String(a.id) === String(row[side + "_account"]));
+        row[side + "_tax_category"] = a && a.tax ? String(a.tax) : "";
+        row[side + "_sub_account"] = "";
+        const other = side === "debit" ? "credit" : "debit";
+        if (a && !row[side + "_amount"] && row[other + "_amount"]) row[side + "_amount"] = row[other + "_amount"];
+      },
+      addRow() {
+        const row = blank();
+        const d = this.debitTotal - this.creditTotal;
+        if (d > 0) row.credit_amount = String(d);
+        if (d < 0) row.debit_amount = String(-d);
+        this.rows.push(row);
+      },
+      removeRow(i) { if (this.rows.length > 1) this.rows.splice(i, 1); },
+      get debitTotal() { return this.rows.reduce((s, r) => s + (r.debit_account ? num(r.debit_amount) : 0), 0); },
+      get creditTotal() { return this.rows.reduce((s, r) => s + (r.credit_account ? num(r.credit_amount) : 0), 0); },
+      fmt(n) { return n.toLocaleString("ja-JP"); },
+    };
+  };
+</script>
+
+<form method="post" x-data="journalEntry()" class="space-y-4">
+  {% csrf_token %}
+  {% if errors %}
+    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+      <ul class="list-disc pl-5">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+  <div class="card card-body grid gap-4 sm:grid-cols-[12rem_1fr_auto]">
+    <div><label class="mb-1 block text-sm font-medium" for="id_date">取引日 <span class="text-red-500">*</span></label>{{ header.date }}{{ header.date.errors }}</div>
+    <div><label class="mb-1 block text-sm font-medium" for="id_description">摘要</label>{{ header.description }}</div>
+    <div class="flex items-center gap-2 pt-6">{{ header.is_opening }}<label for="id_is_opening" class="text-sm">開始残高</label></div>
+  </div>
+
+  <input type="hidden" name="rows-TOTAL_FORMS" :value="rows.length">
+  <input type="hidden" name="rows-INITIAL_FORMS" value="0">
+  <input type="hidden" name="rows-MIN_NUM_FORMS" value="1">
+  <input type="hidden" name="rows-MAX_NUM_FORMS" value="200">
+
+  <div class="card overflow-x-auto">
+    <table class="table min-w-[1100px]">
+      <thead>
+        <tr>
+          <th class="w-8">#</th>
+          <th class="bg-sky-50">借方科目 / 補助</th><th class="bg-sky-50">税区分</th><th class="bg-sky-50 w-36 text-right">借方金額（税込）</th>
+          <th class="bg-rose-50">貸方科目 / 補助</th><th class="bg-rose-50">税区分</th><th class="bg-rose-50 w-36 text-right">貸方金額（税込）</th>
+          <th>行摘要</th><th class="w-8"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="(row, i) in rows" :key="row.key">
+          <tr>
+            <td class="pt-3 text-slate-400" x-text="i + 1"></td>
+            {% for side, bg in sides %}
+              <td class="{{ bg }} space-y-1">
+                <select class="select" :name="`rows-${i}-{{ side }}_account`" x-model="row.{{ side }}_account" @change="accountChanged(row, '{{ side }}')">
+                  <option value="">—</option>
+                  <template x-for="g in groups" :key="g.label">
+                    <optgroup :label="g.label">
+                      <template x-for="a in g.accounts" :key="a.id">
+                        <option :value="a.id" x-text="a.label" :selected="String(a.id) === String(row.{{ side }}_account)"></option>
+                      </template>
+                    </optgroup>
+                  </template>
+                </select>
+                <select class="select text-xs" :name="`rows-${i}-{{ side }}_sub_account`" x-model="row.{{ side }}_sub_account"
+                        x-show="subsFor(row.{{ side }}_account).length">
+                  <option value="">（補助科目なし）</option>
+                  <template x-for="s in subsFor(row.{{ side }}_account)" :key="s.id">
+                    <option :value="s.id" x-text="s.label" :selected="String(s.id) === String(row.{{ side }}_sub_account)"></option>
+                  </template>
+                </select>
+              </td>
+              <td class="{{ bg }}">
+                <select class="select" :name="`rows-${i}-{{ side }}_tax_category`" x-model="row.{{ side }}_tax_category">
+                  <option value="">—</option>
+                  <template x-for="t in opts.taxes" :key="t.id">
+                    <option :value="t.id" x-text="t.label" :selected="String(t.id) === String(row.{{ side }}_tax_category)"></option>
+                  </template>
+                </select>
+              </td>
+              <td class="{{ bg }}">
+                <input class="input text-right tabular-nums" type="number" min="0" step="1"
+                       :name="`rows-${i}-{{ side }}_amount`" x-model="row.{{ side }}_amount">
+              </td>
+            {% endfor %}
+            <td><input class="input" maxlength="255" :name="`rows-${i}-description`" x-model="row.description"></td>
+            <td class="pt-2.5"><button type="button" class="text-slate-400 hover:text-red-600" title="行を削除" @click="removeRow(i)">✕</button></td>
+          </tr>
+        </template>
+      </tbody>
+      <tfoot>
+        <tr class="font-semibold">
+          <td></td>
+          <td colspan="2" class="text-right">借方合計</td><td class="num" x-text="fmt(debitTotal)"></td>
+          <td colspan="2" class="text-right">貸方合計</td><td class="num" x-text="fmt(creditTotal)"></td>
+          <td colspan="2">
+            <span x-show="debitTotal !== creditTotal" class="badge badge-red" x-text="'差額 ' + fmt(Math.abs(debitTotal - creditTotal))"></span>
+            <span x-show="debitTotal === creditTotal && debitTotal > 0" class="badge badge-green">貸借一致</span>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="flex items-center gap-2">
+    <button type="button" class="btn" @click="addRow()">＋ 行を追加</button>
+    <div class="flex-1"></div>
+    <button class="btn" name="continue" :disabled="debitTotal !== creditTotal || debitTotal === 0">登録して続けて入力</button>
+    <button class="btn btn-primary" :disabled="debitTotal !== creditTotal || debitTotal === 0">登録</button>
+  </div>
+  <p class="text-xs text-slate-500">金額は税込で入力します。課税取引の消費税は税区分に従って仮払消費税・仮受消費税へ自動で振り分けます（税抜経理）。</p>
+</form>
+{% endblock %}

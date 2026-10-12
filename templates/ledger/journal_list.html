@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}仕訳帳{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">仕訳帳</h1>
+  <div class="flex gap-2">
+    <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+    {% if request.user|can:"ledger_edit" %}<a class="btn btn-primary" href="{% url 'ledger:journal_new' %}">＋ 仕訳入力</a>{% endif %}
+  </div>
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  {% include "components/period_filter.html" %}
+  <div><label class="mb-1 block">勘定科目</label>
+    <select name="account" class="select"><option value="">すべて</option>
+      {% for a in accounts %}<option value="{{ a.pk }}" {% if request.GET.account == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.code }} {{ a.name }}</option>{% endfor %}
+    </select></div>
+  <div><label class="mb-1 block">発生元</label>
+    <select name="source" class="select"><option value="">すべて</option>
+      {% for v, l in sources %}<option value="{{ v }}" {% if request.GET.source == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select></div>
+  <div><label class="mb-1 block">キーワード</label><input class="input" name="q" value="{{ request.GET.q }}" placeholder="番号・摘要"></div>
+  <button class="btn">検索</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>日付</th><th>仕訳番号</th><th>借方</th><th class="text-right">金額</th><th>貸方</th><th class="text-right">金額</th><th>摘要</th></tr></thead>
+    {% for j in page %}
+      <tbody class="border-t-2 border-slate-200">
+        {% for ln in j.lines.all %}
+          <tr class="{% if ln.tax_base_id %}text-slate-500 text-xs{% endif %}">
+            {% if forloop.first %}
+              <td rowspan="{{ j.lines.all|length }}" class="whitespace-nowrap">{{ j.date|date:"Y/m/d" }}</td>
+              <td rowspan="{{ j.lines.all|length }}" class="whitespace-nowrap">
+                <a class="link" href="{% url 'ledger:journal_detail' j.pk %}">{{ j.number }}</a>
+                <div class="mt-1 flex flex-wrap gap-1">
+                  {% if j.source != "manual" %}<span class="badge badge-blue">{{ j.get_source_display }}</span>{% endif %}
+                  {% if j.is_reversed %}<span class="badge badge-red">取消済</span>{% endif %}
+                </div>
+              </td>
+            {% endif %}
+            {% if ln.side == "D" %}
+              <td>{{ ln.account.name }}{% if ln.sub_account %} / {{ ln.sub_account.name }}{% endif %}{% if ln.tax_category and ln.tax_category.generates_tax_line %} <span class="text-xs text-slate-400">{{ ln.tax_category }}</span>{% endif %}</td>
+              <td class="num">{{ ln.amount|yen }}</td><td></td><td></td>
+            {% else %}
+              <td></td><td></td>
+              <td>{{ ln.account.name }}{% if ln.sub_account %} / {{ ln.sub_account.name }}{% endif %}{% if ln.tax_category and ln.tax_category.generates_tax_line %} <span class="text-xs text-slate-400">{{ ln.tax_category }}</span>{% endif %}</td>
+              <td class="num">{{ ln.amount|yen }}</td>
+            {% endif %}
+            <td class="text-slate-600">{{ ln.description }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    {% empty %}
+      <tbody><tr><td colspan="7" class="py-8 text-center text-slate-500">該当する仕訳がありません。</td></tr></tbody>
+    {% endfor %}
+  </table>
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}

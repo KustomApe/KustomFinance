@@ -21,10 +21,18 @@ def nav_sections(context):
                 url = reverse(item["url"])
             except NoReverseMatch:
                 continue
-            active = request.path == url or (url != "/" and request.path.startswith(url))
-            items.append({**item, "href": url, "active": active})
+            items.append({**item, "href": url, "active": False})
         if items:
             sections.append({"title": section["title"], "items": items})
+    # 現在のパスに最も長く一致するメニューだけを選択状態にする
+    matches = [
+        item
+        for s in sections
+        for item in s["items"]
+        if request.path == item["href"] or (item["href"] != "/" and request.path.startswith(item["href"]))
+    ]
+    if matches:
+        max(matches, key=lambda item: len(item["href"]))["active"] = True
     return sections
 
 
