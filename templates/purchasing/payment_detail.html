@@ -13,16 +13,16 @@
     <dt class="text-slate-500">振込額</dt><dd>{{ payment.amount|yen }}円</dd>
     <dt class="text-slate-500">振込手数料（当社負担）</dt><dd>{{ payment.fee|yen }}円</dd>
     <dt class="text-slate-500">先方負担手数料</dt><dd>{{ payment.deduction|yen }}円</dd>
-    <dt class="text-slate-500">前渡金</dt><dd>{{ payment.advance_amount|yen }}円</dd>
+    <dt class="text-slate-500">前渡金残額</dt><dd>{{ payment.advance_amount|yen }}円{% if payment.advance_amount and payment.status == "active" %} <a class="link text-xs" href="{% url 'purchasing:bill_list' %}?partner={{ payment.partner_id }}&status=issued">仕入請求書に充当</a>{% endif %}</dd>
     <dt class="text-slate-500">メモ</dt><dd>{{ payment.memo|default:"-" }}</dd>
     <dt class="text-slate-500">仕訳</dt><dd>{% if payment.journal %}<a class="link" href="{% url 'ledger:journal_detail' payment.journal_id %}">{{ payment.journal.number }}</a>{% endif %}</dd>
   </dl>
 </div>
 <div class="card overflow-x-auto">
   <table class="table">
-    <thead><tr><th>仕入請求書</th><th>先方請求書番号</th><th class="text-right">請求額</th><th class="text-right">消込額</th></tr></thead>
-    <tbody>{% for a in allocations %}<tr><td><a class="link" href="{% url 'purchasing:bill_detail' a.bill_id %}">{{ a.bill.number }}</a></td><td>{{ a.bill.supplier_invoice_number }}</td><td class="num">{{ a.bill.total|yen }}</td><td class="num">{{ a.amount|yen }}</td></tr>
-      {% empty %}<tr><td colspan="4" class="text-slate-500">消込はありません。</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>仕入請求書</th><th>先方請求書番号</th><th class="text-right">請求額</th><th class="text-right">消込額</th><th>種類</th></tr></thead>
+    <tbody>{% for a in allocations %}<tr class="{% if a.cancelled_at %}text-slate-400 line-through{% endif %}"><td><a class="link" href="{% url 'purchasing:bill_detail' a.bill_id %}">{{ a.bill.number }}</a></td><td>{{ a.bill.supplier_invoice_number }}</td><td class="num">{{ a.bill.total|yen }}</td><td class="num">{{ a.amount|yen }}</td><td class="text-xs">{% if a.is_advance_application %}充当 {{ a.applied_date|date:"Y/m/d" }}{% if a.cancelled_at %}（取消）{% endif %}{% else %}消込{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="text-slate-500">消込はありません。</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 {% if payment.status == "active" and request.user|can:"ledger_edit" %}

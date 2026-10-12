@@ -11,6 +11,7 @@ from apps.core.money import round_yen
 from apps.core.numbering import next_number
 from apps.ledger.models import Account, JournalSource, Side, TaxCategory
 from apps.ledger.services import LineInput, post_journal, reverse_journal
+from apps.masters.advances import has_active_applications
 from apps.masters.doc_services import LINE_FIELDS, allocate_tax, copy_document
 from apps.masters.documents import DocStatus
 from apps.masters.models import TaxRate
@@ -88,7 +89,11 @@ def post_bill(bill: Bill, user) -> None:
 
 
 def cancel_bill(bill: Bill, reason: str, user) -> None:
-    if bill.allocations.exclude(payment__status=Payment.Status.CANCELLED).exists():
+    if (
+        bill.allocations.exclude(payment__status=Payment.Status.CANCELLED)
+        .filter(cancelled_at__isnull=True)
+        .exists()
+    ):
         raise ValidationError("支払消込済みの仕入請求書は取り消せません。先に支払を取り消してください。")
     if bill.journal:
         reverse_journal(bill.journal, max(datetime.date.today(), bill.journal.date), reason, user=user)
@@ -222,6 +227,10 @@ def cancel_payment(payment: Payment, reason: str, user) -> Payment:
     payment = Payment.objects.select_for_update().get(pk=payment.pk)
     if payment.status == Payment.Status.CANCELLED:
         raise ValidationError("この支払はすでに取消済みです。")
+    if has_active_applications(payment):
+        raise ValidationError(
+            "この支払の前渡金を充当した仕入請求書があります。先に充当を取り消してください。"
+        )
     reverse_journal(payment.journal, max(datetime.date.today(), payment.date), reason, user=user)
     payment.status = Payment.Status.CANCELLED
     payment.save()

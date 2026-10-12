@@ -10,6 +10,7 @@ from apps.core.models import Company
 from apps.core.numbering import next_number
 from apps.ledger.models import Account, JournalSource, Side, TaxCategory
 from apps.ledger.services import LineInput, post_journal, reverse_journal
+from apps.masters.advances import has_active_applications
 from apps.masters.doc_services import LINE_FIELDS, allocate_tax, copy_document, sales_tax_code
 from apps.masters.documents import DocStatus
 
@@ -60,7 +61,11 @@ def post_invoice(invoice: Invoice, user) -> None:
 
 
 def cancel_invoice(invoice: Invoice, reason: str, user) -> None:
-    if invoice.allocations.exclude(receipt__status=Receipt.Status.CANCELLED).exists():
+    if (
+        invoice.allocations.exclude(receipt__status=Receipt.Status.CANCELLED)
+        .filter(cancelled_at__isnull=True)
+        .exists()
+    ):
         raise ValidationError("入金消込済みの請求書は取り消せません。先に入金を取り消してください。")
     if invoice.journal:
         reverse_journal(invoice.journal, max(datetime.date.today(), invoice.journal.date), reason, user=user)
@@ -184,6 +189,8 @@ def cancel_receipt(receipt: Receipt, reason: str, user) -> Receipt:
     receipt = Receipt.objects.select_for_update().get(pk=receipt.pk)
     if receipt.status == Receipt.Status.CANCELLED:
         raise ValidationError("この入金はすでに取消済みです。")
+    if has_active_applications(receipt):
+        raise ValidationError("この入金の前受金を充当した請求書があります。先に充当を取り消してください。")
     reverse_journal(receipt.journal, max(datetime.date.today(), receipt.date), reason, user=user)
     receipt.status = Receipt.Status.CANCELLED
     receipt.save()

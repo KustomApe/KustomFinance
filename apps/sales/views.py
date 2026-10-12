@@ -12,13 +12,15 @@ from django.views.decorators.http import require_POST
 from apps.accounts import roles
 from apps.accounts.permissions import require_capability
 from apps.ledger.models import Account
+from apps.masters.advance_views import AdvanceScreens
+from apps.masters.advances import SALES
 from apps.masters.doc_services import copy_document
 from apps.masters.doc_views import DocType, aging_view
 from apps.masters.documents import DocStatus
 from apps.masters.models import Partner
 
 from .forms import DeliveryForm, EstimateForm, InvoiceForm, ReceiptForm, SalesOrderForm
-from .models import Delivery, Estimate, Invoice, Receipt, SalesOrder
+from .models import Delivery, Estimate, Invoice, Receipt, ReceiptAllocation, SalesOrder
 from .services import cancel_invoice, cancel_receipt, create_receipt, invoice_from_deliveries, post_invoice
 
 
@@ -50,6 +52,17 @@ def _delivery_actions(request, doc):
 def _links(*pairs):
     return [(label, docs) for label, docs in pairs if docs]
 
+
+ADVANCES = AdvanceScreens(
+    SALES,
+    source_model=Receipt,
+    document_model=Invoice,
+    allocation_model=ReceiptAllocation,
+    namespace="sales",
+    document_key="invoice",
+    source_detail="sales:receipt_detail",
+    source_label="入金",
+)
 
 ESTIMATE = DocType(
     "estimate",
@@ -96,16 +109,8 @@ INVOICE = DocType(
     on_issue=post_invoice,
     on_cancel=cancel_invoice,
     issue_note="売上仕訳も計上されます",
-    allocations=lambda d: [
-        {
-            "number": a.receipt.number,
-            "date": a.receipt.date,
-            "amount": a.amount,
-            "url": reverse("sales:receipt_detail", args=[a.receipt_id]),
-            "cancelled": a.receipt.status == "cancelled",
-        }
-        for a in d.allocations.select_related("receipt")
-    ],
+    allocations=ADVANCES.allocations,
+    panel=ADVANCES.panel,
     cancel_capability=roles.LEDGER_EDIT,
     related=lambda d: _links(("受注", [d.order] if d.order else []), ("納品書", list(d.deliveries.all()))),
 )

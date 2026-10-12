@@ -76,11 +76,27 @@
   </div>
 {% endif %}
 {% if allocations %}
-  <div class="card card-body mt-4 text-sm">
-    <h2 class="mb-2 font-semibold">消込</h2>
-    {% for a in allocations %}<div><a class="link" href="{{ a.url }}">{{ a.number }}</a> {{ a.date|date:"Y/m/d" }} {{ a.amount|yen }}円{% if a.cancelled %}（取消）{% endif %}</div>{% endfor %}
+  <div class="card mt-4 overflow-x-auto text-sm">
+    <div class="px-4 pt-4 font-semibold">入出金・充当</div>
+    <table class="table">
+      <thead><tr><th>種類</th><th>番号</th><th>日付</th><th class="text-right">金額</th><th></th></tr></thead>
+      <tbody>
+        {% for a in allocations %}
+          <tr class="{% if a.cancelled %}text-slate-400{% endif %}">
+            <td>{{ a.label }}</td><td><a class="link" href="{{ a.url }}">{{ a.number }}</a></td><td>{{ a.date|date:"Y/m/d" }}</td>
+            <td class="num {% if a.cancelled %}line-through{% endif %}">{{ a.amount|yen }}</td>
+            <td class="text-right">{% if a.cancelled %}取消{% elif a.cancel_url %}
+              <form method="post" action="{{ a.cancel_url }}" class="flex justify-end gap-1" x-data="{ open: false }">{% csrf_token %}
+                <button type="button" class="link text-xs" x-show="!open" @click="open = true">充当を取り消す</button>
+                <template x-if="open"><span class="flex gap-1"><input class="input text-xs" name="reason" required placeholder="取消理由"><button class="btn btn-sm btn-danger">取消</button></span></template>
+              </form>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 {% endif %}
+{% if panel %}{% include panel.template %}{% endif %}
 {% if doc.status == "issued" and can_cancel %}
   <form method="post" action="{{ urls.cancel }}" class="card card-body mt-6 max-w-2xl" x-data="{ open: false }">
     {% csrf_token %}

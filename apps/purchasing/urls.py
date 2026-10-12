@@ -6,6 +6,7 @@ from . import views
 
 app_name = "purchasing"
 urlpatterns = [
+    *views.ADVANCES.urlpatterns(),
     *doc_urlpatterns(views.ORDER, "orders"),
     *doc_urlpatterns(views.RECEIPT, "receipts"),
     *doc_urlpatterns(views.BILL, "bills"),

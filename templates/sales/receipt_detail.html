@@ -12,16 +12,16 @@
     <dt class="text-slate-500">入金口座</dt><dd>{{ receipt.deposit_account.name }}{% if receipt.deposit_sub_account %} / {{ receipt.deposit_sub_account.name }}{% endif %}</dd>
     <dt class="text-slate-500">入金額</dt><dd>{{ receipt.amount|yen }}円</dd>
     <dt class="text-slate-500">振込手数料</dt><dd>{{ receipt.fee|yen }}円</dd>
-    <dt class="text-slate-500">前受金</dt><dd>{{ receipt.advance_amount|yen }}円</dd>
+    <dt class="text-slate-500">前受金残額</dt><dd>{{ receipt.advance_amount|yen }}円{% if receipt.advance_amount and receipt.status == "active" %} <a class="link text-xs" href="{% url 'sales:invoice_list' %}?partner={{ receipt.partner_id }}&status=issued">請求書に充当</a>{% endif %}</dd>
     <dt class="text-slate-500">メモ</dt><dd>{{ receipt.memo|default:"-" }}</dd>
     <dt class="text-slate-500">仕訳</dt><dd>{% if receipt.journal %}<a class="link" href="{% url 'ledger:journal_detail' receipt.journal_id %}">{{ receipt.journal.number }}</a>{% endif %}</dd>
   </dl>
 </div>
 <div class="card overflow-x-auto">
   <table class="table">
-    <thead><tr><th>請求書番号</th><th>請求日</th><th class="text-right">請求額</th><th class="text-right">消込額</th></tr></thead>
-    <tbody>{% for a in allocations %}<tr><td><a class="link" href="{% url 'sales:invoice_detail' a.invoice_id %}">{{ a.invoice.number }}</a></td><td>{{ a.invoice.issue_date|date:"Y/m/d" }}</td><td class="num">{{ a.invoice.total|yen }}</td><td class="num">{{ a.amount|yen }}</td></tr>
-      {% empty %}<tr><td colspan="4" class="text-slate-500">消込はありません。</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>請求書番号</th><th>請求日</th><th class="text-right">請求額</th><th class="text-right">消込額</th><th>種類</th></tr></thead>
+    <tbody>{% for a in allocations %}<tr class="{% if a.cancelled_at %}text-slate-400 line-through{% endif %}"><td><a class="link" href="{% url 'sales:invoice_detail' a.invoice_id %}">{{ a.invoice.number }}</a></td><td>{{ a.invoice.issue_date|date:"Y/m/d" }}</td><td class="num">{{ a.invoice.total|yen }}</td><td class="num">{{ a.amount|yen }}</td><td class="text-xs">{% if a.is_advance_application %}充当 {{ a.applied_date|date:"Y/m/d" }}{% if a.cancelled_at %}（取消）{% endif %}{% else %}消込{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="text-slate-500">消込はありません。</td></tr>{% endfor %}</tbody>
   </table>
 </div>
 {% if receipt.status == "active" and request.user|can:"ledger_edit" %}

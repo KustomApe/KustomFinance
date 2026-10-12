@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="page-title mb-2">{{ title }}</h1>
+<p class="mb-4 text-sm text-slate-500">{{ source_label }}のうち、{{ document_title }}に消し込んでいない額です。{{ document_title }}の詳細画面から充当できます。</p>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>取引先</th><th>{{ source_label }}番号</th><th>{{ source_label }}日</th><th class="text-right">{{ label }}残額</th><th>未決済の{{ document_title }}</th></tr></thead>
+    <tbody>
+      {% for s in sources %}
+        <tr><td>{{ s.partner.name }}</td><td><a class="link" href="{{ s.detail_url }}">{{ s.number }}</a></td><td>{{ s.date|date:"Y/m/d" }}</td>
+          <td class="num">{{ s.advance_amount|yen }}</td>
+          <td>{% if s.open_documents %}<a class="link" href="{{ s.documents_url }}">{{ s.open_documents }}件</a>（充当可能）{% else %}<span class="text-slate-400">なし</span>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="py-8 text-center text-slate-500">{{ label }}の残高はありません。</td></tr>{% endfor %}
+    </tbody>
+    <tfoot><tr class="font-semibold"><td colspan="3" class="text-right">合計</td><td class="num">{{ total|yen }}</td><td></td></tr></tfoot>
+  </table>
+</div>
+{% endblock %}

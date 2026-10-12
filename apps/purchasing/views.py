@@ -14,13 +14,15 @@ from apps.accounts import roles
 from apps.accounts.permissions import require_capability
 from apps.core.exports import csv_response
 from apps.ledger.models import Account
+from apps.masters.advance_views import AdvanceScreens
+from apps.masters.advances import PURCHASE
 from apps.masters.doc_services import copy_document
 from apps.masters.doc_views import DocType, aging_view
 from apps.masters.documents import DocStatus
 from apps.masters.models import Partner
 
 from .forms import BillForm, GoodsReceiptForm, PaymentForm, PurchaseOrderForm
-from .models import Bill, GoodsReceipt, Payment, PurchaseOrder
+from .models import Bill, GoodsReceipt, Payment, PaymentAllocation, PurchaseOrder
 from .services import bill_from_receipts, cancel_bill, cancel_payment, create_payment, post_bill
 
 SUPPLIERS = {"is_supplier": True}
@@ -56,6 +58,17 @@ def _bill_actions(request, doc):
         ]
     return []
 
+
+ADVANCES = AdvanceScreens(
+    PURCHASE,
+    source_model=Payment,
+    document_model=Bill,
+    allocation_model=PaymentAllocation,
+    namespace="purchasing",
+    document_key="bill",
+    source_detail="purchasing:payment_detail",
+    source_label="支払",
+)
 
 ORDER = DocType(
     "order",
@@ -108,16 +121,8 @@ BILL = DocType(
     related=lambda d: _links(
         ("注文書", [d.order] if d.order else []), ("検収", list(d.goods_receipts.all()))
     ),
-    allocations=lambda d: [
-        {
-            "number": a.payment.number,
-            "date": a.payment.date,
-            "amount": a.amount,
-            "url": reverse("purchasing:payment_detail", args=[a.payment_id]),
-            "cancelled": a.payment.status == "cancelled",
-        }
-        for a in d.allocations.select_related("payment")
-    ],
+    allocations=ADVANCES.allocations,
+    panel=ADVANCES.panel,
 )
 
 

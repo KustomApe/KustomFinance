@@ -19,6 +19,7 @@ NAV = [
             {"label": "締め請求", "url": "sales:billing", "cap": roles.VIEW},
             {"label": "入金・消込", "url": "sales:receipts", "cap": roles.VIEW},
             {"label": "売掛金残高", "url": "sales:receivables", "cap": roles.VIEW},
+            {"label": "前受金残高", "url": "sales:advances", "cap": roles.VIEW},
         ],
     },
     {
@@ -31,6 +32,7 @@ NAV = [
             {"label": "支払予定表", "url": "purchasing:schedule", "cap": roles.VIEW},
             {"label": "支払・消込", "url": "purchasing:payments", "cap": roles.VIEW},
             {"label": "買掛金残高", "url": "purchasing:payables", "cap": roles.VIEW},
+            {"label": "前渡金残高", "url": "purchasing:advances", "cap": roles.VIEW},
         ],
     },
     {

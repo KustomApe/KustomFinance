@@ -1,0 +1,23 @@
+{% load ui %}
+<div class="card card-body mt-4 border-brand-100 bg-brand-50/40 text-sm">
+  <h2 class="mb-1 font-semibold">{{ panel.label }}を充当する</h2>
+  <p class="mb-3 text-slate-600">この取引先には充当できる{{ panel.label }}があります（未決済額 {{ panel.outstanding|yen }}円）。充当すると「{% if panel.label == "前受金" %}前受金 / 売掛金{% else %}買掛金 / 前渡金{% endif %}」を計上します。</p>
+  {% for s in panel.sources %}
+    <form id="advance-{{ s.pk }}" method="post" action="{{ panel.action }}">{% csrf_token %}<input type="hidden" name="source" value="{{ s.pk }}"></form>
+  {% endfor %}
+  <table class="table">
+    <thead><tr><th>{{ panel.source_label }}番号</th><th>{{ panel.source_label }}日</th><th class="text-right">{{ panel.label }}残額</th><th class="w-40 text-right">充当額</th><th class="w-44">充当日</th><th></th></tr></thead>
+    <tbody>
+      {% for s in panel.sources %}
+        <tr>
+          <td>{{ s.number }}</td><td>{{ s.date|date:"Y/m/d" }}</td><td class="num">{{ s.advance_amount|yen }}</td>
+          <td><input form="advance-{{ s.pk }}" class="input text-right" type="number" min="1" name="amount" required
+                     value="{% if s.advance_amount < panel.outstanding %}{{ s.advance_amount|stringformat:'d' }}{% else %}{{ panel.outstanding|stringformat:'d' }}{% endif %}"></td>
+          <td><input form="advance-{{ s.pk }}" class="input" type="date" name="date" required
+                     value="{% if s.date > panel.today %}{{ s.date|date:'Y-m-d' }}{% else %}{{ panel.today|date:'Y-m-d' }}{% endif %}"></td>
+          <td><button form="advance-{{ s.pk }}" class="btn btn-primary btn-sm">充当する</button></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

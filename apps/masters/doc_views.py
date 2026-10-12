@@ -49,7 +49,10 @@ class DocType:
     detail_fields: list[str] = field(default_factory=list)
     extra_actions: Callable | None = None  # (request, doc) -> list[dict(label, url, method)]
     related: Callable | None = None  # (doc) -> list[(label, [docs])]
-    allocations: Callable | None = None  # (doc) -> list[dict(number, date, amount, url, cancelled)]
+    allocations: Callable | None = (
+        None  # (request, doc) -> list[dict(label, number, date, amount, url, cancelled, cancel_url)]
+    )
+    panel: Callable | None = None  # (request, doc) -> dict(template=..., ...) | None
     issue_label: str = "発行する"
     issue_note: str = ""
 
@@ -212,7 +215,8 @@ def detail_view(spec: DocType):
                 fields=fields,
                 actions=spec.extra_actions(request, doc) if spec.extra_actions else [],
                 related=spec.related(doc) if spec.related else [],
-                allocations=spec.allocations(doc) if spec.allocations else [],
+                allocations=spec.allocations(request, doc) if spec.allocations else [],
+                panel=spec.panel(request, doc) if spec.panel else None,
                 urls={a: spec.url(a, doc.pk) for a in ("edit", "delete", "issue", "cancel", "pdf", "copy")},
                 can_cancel=request.user.can(spec.cancel_capability),
             ),

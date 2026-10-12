@@ -111,9 +111,11 @@ class Bill(TradeDocument):
 
     @property
     def paid_amount(self) -> Decimal:
-        return self.allocations.exclude(payment__status=Payment.Status.CANCELLED).aggregate(
-            s=Sum("amount", default=Decimal(0))
-        )["s"]
+        return (
+            self.allocations.exclude(payment__status=Payment.Status.CANCELLED)
+            .filter(cancelled_at__isnull=True)
+            .aggregate(s=Sum("amount", default=Decimal(0)))["s"]
+        )
 
     @property
     def outstanding(self) -> Decimal:
@@ -224,7 +226,7 @@ class Payment(AuditedModel, TimeStampedModel):
 
     @property
     def allocated_total(self) -> Decimal:
-        return sum((a.amount for a in self.allocations.all()), Decimal(0))
+        return sum((a.amount for a in self.allocations.all() if a.cancelled_at is None), Decimal(0))
 
     @property
     def advance_amount(self) -> Decimal:
@@ -236,6 +238,16 @@ class PaymentAllocation(models.Model):
     payment = models.ForeignKey(Payment, on_delete=models.PROTECT, related_name="allocations")
     bill = models.ForeignKey(Bill, on_delete=models.PROTECT, related_name="allocations")
     amount = MoneyField("消込額")
+    applied_date = models.DateField("充当日", null=True, blank=True)
+    applied_journal = models.OneToOneField(
+        "ledger.Journal",
+        verbose_name="充当仕訳",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    cancelled_at = models.DateTimeField("充当の取消日時", null=True, blank=True)
 
     class Meta:
         verbose_name = "支払消込"
@@ -246,3 +258,8 @@ class PaymentAllocation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.payment.number} → {self.bill.number}: {self.amount}"
+
+    @property
+    def is_advance_application(self) -> bool:
+        """入出金後に前受金・前渡金から充当したもの（入出金時の消込ではない）。"""
+        return self.applied_journal_id is not None
