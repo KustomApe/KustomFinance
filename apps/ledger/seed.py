@@ -14,6 +14,7 @@ TAX_CATEGORIES = [
     ("P10-50", "課税仕入10%（経過措置50%）", "taxable_purchase", 10, False, 50),
     ("P8R-50", "課税仕入8%軽減（経過措置50%）", "taxable_purchase", 8, True, 50),
     ("P10-0", "課税仕入10%（控除不可）", "taxable_purchase", 10, False, 0),
+    ("P8R-0", "課税仕入8%軽減（控除不可）", "taxable_purchase", 8, True, 0),
     ("PNT", "非課税仕入", "exempt_purchase", 0, False, 100),
 ]
 

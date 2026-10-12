@@ -14,16 +14,17 @@
       {% if doc.is_draft %}
         <a class="btn" href="{{ urls.edit }}">編集</a>
         <form method="post" action="{{ urls.delete }}" onsubmit="return confirm('下書きを削除しますか？')">{% csrf_token %}<button class="btn">削除</button></form>
-        <form method="post" action="{{ urls.issue }}">{% csrf_token %}<button class="btn btn-primary">発行する</button></form>
+        <form method="post" action="{{ urls.issue }}">{% csrf_token %}<button class="btn btn-primary">{{ spec.issue_label }}</button></form>
       {% endif %}
-      {% for a in actions %}
-        <form method="post" action="{{ a.url }}">{% csrf_token %}<button class="btn {% if a.primary %}btn-primary{% endif %}">{{ a.label }}</button></form>
-      {% endfor %}
     {% endif %}
+    {% for a in actions %}
+      {% if a.get %}<a class="btn" href="{{ a.url }}" target="_blank">{{ a.label }}</a>
+      {% else %}<form method="post" action="{{ a.url }}">{% csrf_token %}<button class="btn {% if a.primary %}btn-primary{% endif %}">{{ a.label }}</button></form>{% endif %}
+    {% endfor %}
   </div>
 </div>
 {% if doc.is_draft %}
-  <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">下書きです。「発行する」で番号が採番され、内容が確定します{% if spec.on_issue %}（売上仕訳も計上されます）{% endif %}。発行後は編集できません。</div>
+  <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">下書きです。「{{ spec.issue_label }}」で番号が採番され、内容が確定します{% if spec.issue_note %}（{{ spec.issue_note }}）{% endif %}。確定後は編集できません。</div>
 {% elif doc.status == "cancelled" %}
   <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{{ doc.cancelled_at|date:"Y/m/d H:i" }} に取り消されました。理由: {{ doc.cancel_reason }}</div>
 {% endif %}
@@ -74,18 +75,18 @@
     {% endfor %}
   </div>
 {% endif %}
-{% if doc.allocations %}{% with allocs=doc.allocations.all %}{% if allocs %}
+{% if allocations %}
   <div class="card card-body mt-4 text-sm">
-    <h2 class="mb-2 font-semibold">入金消込</h2>
-    {% for a in allocs %}<div><a class="link" href="{% url 'sales:receipt_detail' a.receipt_id %}">{{ a.receipt.number }}</a> {{ a.receipt.date|date:"Y/m/d" }} {{ a.amount|yen }}円{% if a.receipt.status == "cancelled" %}（取消）{% endif %}</div>{% endfor %}
+    <h2 class="mb-2 font-semibold">消込</h2>
+    {% for a in allocations %}<div><a class="link" href="{{ a.url }}">{{ a.number }}</a> {{ a.date|date:"Y/m/d" }} {{ a.amount|yen }}円{% if a.cancelled %}（取消）{% endif %}</div>{% endfor %}
   </div>
-{% endif %}{% endwith %}{% endif %}
+{% endif %}
 {% if doc.status == "issued" and can_cancel %}
   <form method="post" action="{{ urls.cancel }}" class="card card-body mt-6 max-w-2xl" x-data="{ open: false }">
     {% csrf_token %}
     <button type="button" class="link text-left text-sm" @click="open = !open">この{{ title }}を取り消す</button>
     <div x-show="open" x-cloak class="mt-3 space-y-3">
-      <p class="text-sm text-slate-600">発行済みの帳票は削除できません。取り消すと{% if spec.on_cancel %}売上仕訳の取消仕訳が計上され、{% endif %}帳票は「取消」として保存されます。訂正する場合は「複製」から作り直してください。</p>
+      <p class="text-sm text-slate-600">発行済みの帳票は削除できません。取り消すと{% if spec.on_cancel %}仕訳の取消仕訳が計上され、{% endif %}帳票は「取消」として保存されます。訂正する場合は「複製」から作り直してください。</p>
       <input class="input" name="reason" required maxlength="200" placeholder="取消理由">
       <button class="btn btn-danger">取り消す</button>
     </div>

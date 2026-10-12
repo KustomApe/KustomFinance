@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}支払予定表{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">支払予定表</h1>
+  <div class="flex gap-2">
+    <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+    {% if request.user|can:"ledger_edit" %}<a class="btn btn-primary" href="{% url 'purchasing:payment_new' %}">＋ 支払を登録</a>{% endif %}
+  </div>
+</div>
+<form class="card card-body mb-4 flex items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">支払期日まで</label><input type="date" class="input" name="date_to" value="{{ request.GET.date_to }}"></div>
+  <button class="btn">表示</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>支払期日</th><th>支払先</th><th>仕入請求書</th><th>先方請求書番号</th><th>振込先</th><th class="text-right">未払額</th><th></th></tr></thead>
+    {% for g in groups %}
+      <tbody>
+        {% for bill, amount in g.bills %}
+          <tr>
+            {% if forloop.first %}<td rowspan="{{ g.bills|length }}" class="whitespace-nowrap {% if g.date < today %}font-semibold text-red-700{% endif %}">{{ g.date|date:"Y/m/d" }}{% if g.date < today %}<div class="text-xs">期日超過</div>{% endif %}</td>{% endif %}
+            <td>{{ bill.partner.name }}</td>
+            <td><a class="link" href="{% url 'purchasing:bill_detail' bill.pk %}">{{ bill.number }}</a></td>
+            <td>{{ bill.supplier_invoice_number }}</td>
+            <td class="whitespace-pre-line text-xs text-slate-600">{{ bill.partner.bank_account_info }}</td>
+            <td class="num">{{ amount|yen }}</td>
+            <td class="text-right">{% if request.user|can:"ledger_edit" %}<a class="link text-xs" href="{% url 'purchasing:payment_new' %}?partner={{ bill.partner_id }}">支払</a>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        <tr class="bg-slate-50 font-semibold"><td colspan="5" class="text-right">{{ g.date|date:"Y/m/d" }} 計</td><td class="num">{{ g.total|yen }}</td><td></td></tr>
+      </tbody>
+    {% empty %}<tbody><tr><td colspan="7" class="py-8 text-center text-slate-500">未払の仕入請求書はありません。</td></tr></tbody>{% endfor %}
+    <tfoot><tr class="font-bold"><td colspan="5" class="text-right">合計</td><td class="num">{{ grand_total|yen }}</td><td></td></tr></tfoot>
+  </table>
+</div>
+{% endblock %}

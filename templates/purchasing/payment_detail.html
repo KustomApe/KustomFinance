@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}支払 {{ payment.number }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">支払 {{ payment.number }} {% if payment.status == "cancelled" %}<span class="badge badge-red">取消</span>{% endif %}</h1>
+  <a class="btn" href="{% url 'purchasing:payments' %}">一覧へ</a>
+</div>
+<div class="card card-body mb-4 text-sm">
+  <dl class="grid grid-cols-[10rem_1fr] gap-y-2">
+    <dt class="text-slate-500">支払先</dt><dd>{{ payment.partner.name }}</dd>
+    <dt class="text-slate-500">支払日</dt><dd>{{ payment.date|date:"Y/m/d" }}</dd>
+    <dt class="text-slate-500">支払口座</dt><dd>{{ payment.pay_account.name }}{% if payment.pay_sub_account %} / {{ payment.pay_sub_account.name }}{% endif %}</dd>
+    <dt class="text-slate-500">振込額</dt><dd>{{ payment.amount|yen }}円</dd>
+    <dt class="text-slate-500">振込手数料（当社負担）</dt><dd>{{ payment.fee|yen }}円</dd>
+    <dt class="text-slate-500">先方負担手数料</dt><dd>{{ payment.deduction|yen }}円</dd>
+    <dt class="text-slate-500">前渡金</dt><dd>{{ payment.advance_amount|yen }}円</dd>
+    <dt class="text-slate-500">メモ</dt><dd>{{ payment.memo|default:"-" }}</dd>
+    <dt class="text-slate-500">仕訳</dt><dd>{% if payment.journal %}<a class="link" href="{% url 'ledger:journal_detail' payment.journal_id %}">{{ payment.journal.number }}</a>{% endif %}</dd>
+  </dl>
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>仕入請求書</th><th>先方請求書番号</th><th class="text-right">請求額</th><th class="text-right">消込額</th></tr></thead>
+    <tbody>{% for a in allocations %}<tr><td><a class="link" href="{% url 'purchasing:bill_detail' a.bill_id %}">{{ a.bill.number }}</a></td><td>{{ a.bill.supplier_invoice_number }}</td><td class="num">{{ a.bill.total|yen }}</td><td class="num">{{ a.amount|yen }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-slate-500">消込はありません。</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% if payment.status == "active" and request.user|can:"ledger_edit" %}
+  <form method="post" class="card card-body mt-6 max-w-xl space-y-3" x-data="{ open: false }">
+    {% csrf_token %}
+    <button type="button" class="link text-left text-sm" @click="open = !open">この支払を取り消す</button>
+    <div x-show="open" x-cloak class="space-y-3"><input class="input" name="reason" required maxlength="200" placeholder="取消理由"><button class="btn btn-danger">取り消す</button></div>
+  </form>
+{% endif %}
+{% endblock %}

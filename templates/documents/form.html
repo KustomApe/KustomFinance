@@ -41,7 +41,7 @@
     };
   };
 </script>
-<form method="post" x-data="docLines()" class="space-y-4">
+<form method="post" enctype="multipart/form-data" x-data="docLines()" class="space-y-4">
   {% csrf_token %}
   {% if errors %}
     <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><ul class="list-disc pl-5">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>

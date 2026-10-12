@@ -22,6 +22,18 @@ NAV = [
         ],
     },
     {
+        "title": "購買",
+        "items": [
+            {"label": "注文書", "url": "purchasing:order_list", "cap": roles.VIEW},
+            {"label": "検収", "url": "purchasing:receipt_list", "cap": roles.VIEW},
+            {"label": "仕入請求書", "url": "purchasing:bill_list", "cap": roles.VIEW},
+            {"label": "未計上の検収", "url": "purchasing:unbilled", "cap": roles.VIEW},
+            {"label": "支払予定表", "url": "purchasing:schedule", "cap": roles.VIEW},
+            {"label": "支払・消込", "url": "purchasing:payments", "cap": roles.VIEW},
+            {"label": "買掛金残高", "url": "purchasing:payables", "cap": roles.VIEW},
+        ],
+    },
+    {
         "title": "会計",
         "items": [
             {"label": "仕訳入力", "url": "ledger:journal_new", "cap": roles.LEDGER_EDIT},

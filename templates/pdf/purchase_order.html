@@ -1,0 +1,7 @@
+{% extends "pdf/document_base.html" %}
+{% block doc_title %}注文書{% endblock %}
+{% block lead %}下記のとおり注文いたします。{% endblock %}
+{% block date_label %}注文日{% endblock %}
+{% block extra_meta %}{% if doc.delivery_date %}<tr><td>希望納期</td><td>{{ doc.delivery_date|date:"Y年n月j日" }}</td></tr>{% endif %}{% endblock %}
+{% block total_label %}ご注文金額{% endblock %}
+{% block before_lines %}{% if doc.delivery_place or doc.payment_terms %}<p>{% if doc.delivery_place %}納品場所：{{ doc.delivery_place }}　{% endif %}{% if doc.payment_terms %}支払条件：{{ doc.payment_terms }}{% endif %}</p>{% endif %}{% endblock %}

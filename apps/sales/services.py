@@ -10,23 +10,10 @@ from apps.core.models import Company
 from apps.core.numbering import next_number
 from apps.ledger.models import Account, JournalSource, Side, TaxCategory
 from apps.ledger.services import LineInput, post_journal, reverse_journal
-from apps.masters.doc_services import LINE_FIELDS, copy_document, sales_tax_code
+from apps.masters.doc_services import LINE_FIELDS, allocate_tax, copy_document, sales_tax_code
 from apps.masters.documents import DocStatus
 
 from .models import Delivery, Invoice, Receipt, ReceiptAllocation
-
-
-def _allocate_tax(groups: dict, rate_tax: Decimal) -> dict:
-    """税率内で科目が複数ある場合、税額を対象額で按分する（端数は最大の科目へ）。"""
-    total = sum(groups.values())
-    if not total:
-        return {k: Decimal(0) for k in groups}
-    shares = {
-        k: (rate_tax * v / total).quantize(Decimal("1"), rounding="ROUND_FLOOR") for k, v in groups.items()
-    }
-    largest = max(groups, key=lambda k: abs(groups[k]))
-    shares[largest] += rate_tax - sum(shares.values())
-    return shares
 
 
 def post_invoice(invoice: Invoice, user) -> None:
@@ -47,7 +34,7 @@ def post_invoice(invoice: Invoice, user) -> None:
     lines = [LineInput(Account.by_key("accounts_receivable"), Side.DEBIT, invoice.total, **common)]
     tax_categories = {t.code: t for t in TaxCategory.objects.all()}
     for rate, groups in bases.items():
-        shares = _allocate_tax(groups, taxes.get(rate, Decimal(0)))
+        shares = allocate_tax(groups, taxes.get(rate, Decimal(0)))
         for account, base in groups.items():
             gross = base + shares[account]
             if gross == 0:

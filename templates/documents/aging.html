@@ -1,15 +1,15 @@
 {% extends "base.html" %}{% load ui %}
-{% block title %}売掛金残高{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="mb-6 flex items-center justify-between">
-  <h1 class="page-title">売掛金残高・年齢表</h1>
+  <h1 class="page-title">{{ title }}</h1>
   <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
 </div>
 <form class="card card-body mb-4 flex items-end gap-3 text-sm" method="get">
   <div><label class="mb-1 block">基準日</label><input type="date" class="input" name="as_of" value="{{ as_of|date:'Y-m-d' }}"></div>
   <button class="btn">表示</button>
 </form>
-<p class="mb-2 text-sm text-slate-500">未入金の請求書を支払期日からの経過日数で集計しています。</p>
+<p class="mb-2 text-sm text-slate-500">未決済の{{ doc_label }}を支払期日からの経過日数で集計しています。</p>
 <div class="card overflow-x-auto">
   <table class="table">
     <thead><tr><th>取引先</th>{% for b in buckets %}<th class="text-right">{{ b }}</th>{% endfor %}<th class="text-right">合計</th></tr></thead>
@@ -18,12 +18,12 @@
         <tr x-data="{ open: false }">
           <td><button type="button" class="link" @click="open = !open">{{ r.partner.name }}</button>
             <div x-show="open" x-cloak class="mt-1 space-y-0.5 text-xs text-slate-600">
-              {% for inv, amount, overdue in r.invoices %}<div><a class="link" href="{% url 'sales:invoice_detail' inv.pk %}">{{ inv.number }}</a> 期日 {{ inv.due_date|date:"Y/m/d" }} 未入金 {{ amount|yen }}{% if overdue > 0 %} <span class="text-red-600">（{{ overdue }}日超過）</span>{% endif %}</div>{% endfor %}
+              {% for doc, amount, overdue in r.documents %}<div><a class="link" href="{% url detail_url doc.pk %}">{{ doc.number }}</a> 期日 {{ doc.due_date|date:"Y/m/d" }} 未決済 {{ amount|yen }}{% if overdue > 0 %} <span class="text-red-600">（{{ overdue }}日超過）</span>{% endif %}</div>{% endfor %}
             </div></td>
           {% for v in r.buckets %}<td class="num {% if not forloop.first and v %}text-red-700{% endif %}">{{ v|yen }}</td>{% endfor %}
           <td class="num font-semibold">{{ r.total|yen }}</td>
         </tr>
-      {% empty %}<tr><td colspan="{{ buckets|length|add:2 }}" class="py-8 text-center text-slate-500">未入金の請求書はありません。</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="{{ buckets|length|add:2 }}" class="py-8 text-center text-slate-500">未決済の{{ doc_label }}はありません。</td></tr>{% endfor %}
     </tbody>
     <tfoot><tr class="font-bold"><td>合計</td>{% for v in totals %}<td class="num">{{ v|yen }}</td>{% endfor %}<td class="num">{{ grand_total|yen }}</td></tr></tfoot>
   </table>

@@ -1,0 +1,12 @@
+{% extends "pdf/document_base.html" %}
+{% block doc_title %}仕入計上票{% endblock %}
+{% block lead %}受領した請求書の計上内容（社内控え）{% endblock %}
+{% block date_label %}請求日{% endblock %}
+{% block extra_meta %}
+  {% if doc.supplier_invoice_number %}<tr><td>先方請求書番号</td><td>{{ doc.supplier_invoice_number }}</td></tr>{% endif %}
+  <tr><td>先方登録番号</td><td>{{ doc.supplier_registration_number|default:"なし（経過措置適用）" }}</td></tr>
+  {% if doc.purchase_date %}<tr><td>仕入計上日</td><td>{{ doc.purchase_date|date:"Y年n月j日" }}</td></tr>{% endif %}
+  {% if doc.due_date %}<tr><td>支払期日</td><td>{{ doc.due_date|date:"Y年n月j日" }}</td></tr>{% endif %}
+{% endblock %}
+{% block total_label %}請求金額{% endblock %}
+{% block after_lines %}{% if doc.attachment_sha256 %}<p class="small">受領ファイル SHA-256: {{ doc.attachment_sha256 }}</p>{% endif %}{% endblock %}

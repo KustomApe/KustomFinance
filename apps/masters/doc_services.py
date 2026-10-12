@@ -2,6 +2,7 @@
 
 import hashlib
 from collections.abc import Callable
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
@@ -27,6 +28,19 @@ def sales_tax_code(rate: str) -> str:
         TaxRate.EXEMPT: "SNT",
         TaxRate.EXPORT: "SEX",
     }.get(rate, "OUT")
+
+
+def allocate_tax(groups: dict, rate_tax: Decimal) -> dict:
+    """税率内で科目が複数ある場合、税額を対象額で按分する（端数は最大の科目へ）。"""
+    total = sum(groups.values())
+    if not total:
+        return {k: Decimal(0) for k in groups}
+    shares = {
+        k: (rate_tax * v / total).quantize(Decimal("1"), rounding="ROUND_FLOOR") for k, v in groups.items()
+    }
+    largest = max(groups, key=lambda k: abs(groups[k]))
+    shares[largest] += rate_tax - sum(shares.values())
+    return shares
 
 
 @transaction.atomic

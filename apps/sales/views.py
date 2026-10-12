@@ -11,10 +11,9 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts import roles
 from apps.accounts.permissions import require_capability
-from apps.core.exports import csv_response
 from apps.ledger.models import Account
 from apps.masters.doc_services import copy_document
-from apps.masters.doc_views import DocType
+from apps.masters.doc_views import DocType, aging_view
 from apps.masters.documents import DocStatus
 from apps.masters.models import Partner
 
@@ -96,6 +95,17 @@ INVOICE = DocType(
     detail_fields=["sales_date", "due_date"],
     on_issue=post_invoice,
     on_cancel=cancel_invoice,
+    issue_note="売上仕訳も計上されます",
+    allocations=lambda d: [
+        {
+            "number": a.receipt.number,
+            "date": a.receipt.date,
+            "amount": a.amount,
+            "url": reverse("sales:receipt_detail", args=[a.receipt_id]),
+            "cancelled": a.receipt.status == "cancelled",
+        }
+        for a in d.allocations.select_related("receipt")
+    ],
     cancel_capability=roles.LEDGER_EDIT,
     related=lambda d: _links(("受注", [d.order] if d.order else []), ("納品書", list(d.deliveries.all()))),
 )
@@ -262,62 +272,13 @@ def receipt_detail(request, pk):
     )
 
 
-AGING_BUCKETS = [
-    ("期日内", None, 0),
-    ("1〜30日", 1, 30),
-    ("31〜60日", 31, 60),
-    ("61〜90日", 61, 90),
-    ("91日以上", 91, None),
-]
-
-
 @require_capability(roles.VIEW)
 def receivables(request):
     """売掛金残高・年齢表（支払期日からの経過日数）。"""
-    as_of = datetime.date.today()
-    if raw := request.GET.get("as_of"):
-        as_of = datetime.date.fromisoformat(raw)
-    rows: dict[int, dict] = {}
-    for inv in Invoice.objects.filter(status=DocStatus.ISSUED, issue_date__lte=as_of).select_related(
-        "partner"
-    ):
-        outstanding = inv.outstanding
-        if outstanding <= 0:
-            continue
-        overdue = (as_of - (inv.due_date or inv.issue_date)).days
-        idx = next(
-            i
-            for i, (_, lo, hi) in enumerate(AGING_BUCKETS)
-            if (lo is None or overdue >= lo) and (hi is None or overdue <= hi)
-        )
-        row = rows.setdefault(
-            inv.partner_id,
-            {
-                "partner": inv.partner,
-                "buckets": [Decimal(0)] * len(AGING_BUCKETS),
-                "total": Decimal(0),
-                "invoices": [],
-            },
-        )
-        row["buckets"][idx] += outstanding
-        row["total"] += outstanding
-        row["invoices"].append((inv, outstanding, overdue))
-    rows_list = sorted(rows.values(), key=lambda r: r["partner"].code)
-    totals = [sum(r["buckets"][i] for r in rows_list) for i in range(len(AGING_BUCKETS))]
-    if request.GET.get("format") == "csv":
-        return csv_response(
-            f"売掛金年齢表_{as_of}.csv",
-            ["取引先コード", "取引先", *[b[0] for b in AGING_BUCKETS], "合計"],
-            [[r["partner"].code, r["partner"].name, *r["buckets"], r["total"]] for r in rows_list],
-        )
-    return render(
+    return aging_view(
         request,
-        "sales/receivables.html",
-        {
-            "rows": rows_list,
-            "buckets": [b[0] for b in AGING_BUCKETS],
-            "totals": totals,
-            "grand_total": sum(totals),
-            "as_of": as_of,
-        },
+        Invoice.objects.filter(status=DocStatus.ISSUED),
+        title="売掛金残高・年齢表",
+        detail_url="sales:invoice_detail",
+        doc_label="請求書",
     )

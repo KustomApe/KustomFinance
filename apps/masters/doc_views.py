@@ -17,8 +17,10 @@ from django.urls import path, reverse
 from django.views.decorators.http import require_POST
 
 from apps.accounts import roles
+from apps.core.exports import csv_response
 from apps.core.models import Company
 
+from .aging import LABELS, aging_rows
 from .doc_forms import LineFormSet
 from .doc_services import (
     LINE_FIELDS,
@@ -47,6 +49,9 @@ class DocType:
     detail_fields: list[str] = field(default_factory=list)
     extra_actions: Callable | None = None  # (request, doc) -> list[dict(label, url, method)]
     related: Callable | None = None  # (doc) -> list[(label, [docs])]
+    allocations: Callable | None = None  # (doc) -> list[dict(number, date, amount, url, cancelled)]
+    issue_label: str = "発行する"
+    issue_note: str = ""
 
     @property
     def title(self) -> str:
@@ -149,7 +154,7 @@ def edit_view(spec: DocType):
             messages.error(request, "発行済みの帳票は編集できません。")
             return redirect(spec.url("detail", doc.pk))
         initial = {"issue_date": datetime.date.today()}
-        form = spec.form_class(request.POST or None, instance=doc, initial=initial)
+        form = spec.form_class(request.POST or None, request.FILES or None, instance=doc, initial=initial)
         form.fields["partner"].queryset = Partner.objects.filter(**spec.partner_filter, is_active=True)
         errors: list[str] = []
         rows = _rows_from_doc(doc) if doc else [{"quantity": "1", "tax_rate": TaxRate.STANDARD}]
@@ -207,6 +212,7 @@ def detail_view(spec: DocType):
                 fields=fields,
                 actions=spec.extra_actions(request, doc) if spec.extra_actions else [],
                 related=spec.related(doc) if spec.related else [],
+                allocations=spec.allocations(doc) if spec.allocations else [],
                 urls={a: spec.url(a, doc.pk) for a in ("edit", "delete", "issue", "cancel", "pdf", "copy")},
                 can_cancel=request.user.can(spec.cancel_capability),
             ),
@@ -302,3 +308,34 @@ def doc_urlpatterns(spec: DocType, prefix: str) -> list:
         path(f"{prefix}/<int:pk>/pdf/", pdf_view(spec), name=f"{spec.key}_pdf"),
         path(f"{prefix}/<int:pk>/copy/", copy_view(spec), name=f"{spec.key}_copy"),
     ]
+
+
+def aging_view(request, queryset, *, title: str, detail_url: str, doc_label: str):
+    """売掛金・買掛金の残高・年齢表。"""
+    as_of = datetime.date.today()
+    if raw := request.GET.get("as_of"):
+        try:
+            as_of = datetime.date.fromisoformat(raw)
+        except ValueError:
+            pass
+    rows, totals = aging_rows(queryset.filter(issue_date__lte=as_of).select_related("partner"), as_of)
+    if request.GET.get("format") == "csv":
+        return csv_response(
+            f"{title}_{as_of}.csv",
+            ["取引先コード", "取引先", *LABELS, "合計"],
+            [[r["partner"].code, r["partner"].name, *r["buckets"], r["total"]] for r in rows],
+        )
+    return render(
+        request,
+        "documents/aging.html",
+        {
+            "title": title,
+            "rows": rows,
+            "buckets": LABELS,
+            "totals": totals,
+            "grand_total": sum(totals),
+            "as_of": as_of,
+            "detail_url": detail_url,
+            "doc_label": doc_label,
+        },
+    )

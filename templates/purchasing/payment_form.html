@@ -1,0 +1,70 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}支払の登録{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">支払の登録</h1>
+<form method="get" class="card card-body mb-4 flex items-end gap-3 text-sm">
+  <div><label class="mb-1 block">支払先</label>
+    <select name="partner" class="select" onchange="this.form.submit()"><option value="">選択してください</option>
+      {% for p in partners %}<option value="{{ p.pk }}" {% if partner == p %}selected{% endif %}>{{ p.code }} {{ p.name }}</option>{% endfor %}</select></div>
+  {% if partner.bank_account_info %}<div class="text-slate-600"><div class="text-xs text-slate-500">振込先</div><div class="whitespace-pre-line">{{ partner.bank_account_info }}</div></div>{% endif %}
+</form>
+{% if partner %}
+<form method="post" class="space-y-4" x-data="paymentForm()">
+  {% csrf_token %}
+  <input type="hidden" name="partner" value="{{ partner.pk }}">
+  <div class="card card-body">{% include "components/form_fields.html" with cols="sm:grid-cols-3" %}</div>
+  <div class="card overflow-x-auto">
+    <div class="flex items-center justify-between px-4 pt-4">
+      <h2 class="font-semibold">未払の仕入請求書</h2>
+      <div class="flex gap-2">
+        <button type="button" class="btn btn-sm" @click="fillAll()">全額を支払う</button>
+        <button type="button" class="btn btn-sm" @click="auto()">振込額から古い順に割り当て</button>
+      </div>
+    </div>
+    <table class="table mt-2">
+      <thead><tr><th>番号</th><th>先方請求書番号</th><th>支払期日</th><th class="text-right">請求額</th><th class="text-right">未払額</th><th class="w-40 text-right">消込額</th></tr></thead>
+      <tbody>
+        {% for bill in bills %}
+          <tr>
+            <td><a class="link" href="{% url 'purchasing:bill_detail' bill.pk %}" target="_blank">{{ bill.number }}</a></td>
+            <td>{{ bill.supplier_invoice_number }}</td><td>{{ bill.due_date|date:"Y/m/d" }}</td>
+            <td class="num">{{ bill.total|yen }}</td><td class="num">{{ bill.outstanding|yen }}</td>
+            <td><input class="input text-right" type="number" min="0" max="{{ bill.outstanding }}" name="alloc-{{ bill.pk }}" data-outstanding="{{ bill.outstanding }}" value="{{ bill.posted_alloc|default:'' }}" @input="sum()"></td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="py-6 text-center text-slate-500">未払の仕入請求書はありません（全額が前渡金になります）。</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr class="font-semibold"><td colspan="5" class="text-right">消込合計 / 前渡金</td>
+        <td class="num"><span x-text="allocated.toLocaleString('ja-JP')"></span> / <span x-text="(available - allocated).toLocaleString('ja-JP')"></span></td></tr></tfoot>
+    </table>
+  </div>
+  <button class="btn btn-primary">支払を登録</button>
+  <p class="text-xs text-slate-500">仕訳: 買掛金（消込額）・前渡金（残額）・支払手数料（当社負担） / 支払口座（振込額＋当社負担手数料）・支払手数料（先方負担分）。</p>
+</form>
+<script>
+  window.paymentForm = function () {
+    const v = id => parseInt(document.getElementById(id)?.value || 0, 10) || 0;
+    return {
+      allocated: 0, available: 0,
+      inputs() { return [...document.querySelectorAll("input[name^='alloc-']")]; },
+      init() { this.$nextTick(() => this.sum()); document.querySelectorAll("#id_amount, #id_deduction").forEach(e => e.addEventListener("input", () => this.sum())); },
+      sum() {
+        this.available = v("id_amount") + v("id_deduction");
+        this.allocated = this.inputs().reduce((s, e) => s + (parseInt(e.value || 0, 10) || 0), 0);
+      },
+      fillAll() {
+        let total = 0;
+        for (const e of this.inputs()) { e.value = e.dataset.outstanding; total += parseInt(e.dataset.outstanding, 10); }
+        document.getElementById("id_amount").value = total - v("id_deduction");
+        this.sum();
+      },
+      auto() {
+        this.sum();
+        let rest = this.available;
+        for (const e of this.inputs()) { const a = Math.min(rest, parseInt(e.dataset.outstanding, 10)); e.value = a > 0 ? a : ""; rest -= Math.max(a, 0); }
+        this.sum();
+      },
+    };
+  };
+</script>
+{% endif %}
+{% endblock %}

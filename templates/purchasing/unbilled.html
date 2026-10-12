@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}未計上の検収{% endblock %}
+{% block content %}
+<h1 class="page-title mb-2">未計上の検収</h1>
+<p class="mb-4 text-sm text-slate-500">請求書が届いたら、未計上の検収を選んでまとめて仕入請求書を作成します。明細には検収日が取引日として記載されます。</p>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">取引先</label>
+    <select name="partner" class="select"><option value="">すべて</option>
+      {% for p in partners %}<option value="{{ p.pk }}" {% if request.GET.partner == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+  <div><label class="mb-1 block">検収日まで</label><input type="date" class="input" name="date_to" value="{{ request.GET.date_to }}"></div>
+  <button class="btn">絞り込み</button>
+</form>
+<form method="post" action="{% url 'purchasing:unbilled_create' %}" x-data="{ n: 0 }">
+  {% csrf_token %}
+  <div class="card overflow-x-auto">
+    <table class="table">
+      <thead><tr><th class="w-8"></th><th>仕入先</th><th>検収番号</th><th>検収日</th><th>件名</th><th class="text-right">合計（税込）</th></tr></thead>
+      <tbody>
+        {% for d in receipts %}
+          <tr>
+            <td><input type="checkbox" class="checkbox" name="receipt" value="{{ d.pk }}" @change="n += $event.target.checked ? 1 : -1"></td>
+            <td>{{ d.partner.name }}</td>
+            <td><a class="link" href="{% url 'purchasing:receipt_detail' d.pk %}">{{ d.number }}</a></td>
+            <td>{{ d.issue_date|date:"Y/m/d" }}</td><td>{{ d.subject }}</td><td class="num">{{ d.total|yen }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="py-8 text-center text-slate-500">未計上の検収はありません。</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if request.user|can:"sales_edit" %}
+    <div class="mt-4"><button class="btn btn-primary" :disabled="n === 0">選択した検収から仕入請求書を作成</button></div>
+  {% endif %}
+</form>
+{% endblock %}

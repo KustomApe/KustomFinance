@@ -8,5 +8,6 @@ urlpatterns = [
     path("ledger/", include("apps.ledger.urls")),
     path("masters/", include("apps.masters.urls")),
     path("sales/", include("apps.sales.urls")),
+    path("purchasing/", include("apps.purchasing.urls")),
     path("", include("apps.core.urls")),
 ]
