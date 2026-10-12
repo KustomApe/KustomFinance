@@ -116,6 +116,7 @@ BILL = DocType(
     on_cancel=cancel_bill,
     cancel_capability=roles.LEDGER_EDIT,
     issue_label="計上する",
+    pdf_downloadable=False,
     issue_note="仕入仕訳（買掛金）が計上されます",
     extra_actions=_bill_actions,
     related=lambda d: _links(

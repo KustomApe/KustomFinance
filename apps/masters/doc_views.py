@@ -4,8 +4,11 @@
 """
 
 import datetime
+import io
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -14,6 +17,7 @@ from django.db.models import Q
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import path, reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts import roles
@@ -54,6 +58,7 @@ class DocType:
     )
     panel: Callable | None = None  # (request, doc) -> dict(template=..., ...) | None
     issue_label: str = "発行する"
+    pdf_downloadable: bool = True  # 「発行してPDFをダウンロード」を出すか（受領した仕入請求書は出さない）
     issue_note: str = ""
 
     @property
@@ -70,6 +75,7 @@ def _ctx(spec: DocType, **extra) -> dict:
         "title": spec.title,
         "list_url": spec.url("list"),
         "new_url": spec.url("new"),
+        "zip_url": reverse(f"{spec.namespace}:{spec.key}_pdf_zip"),
         **extra,
     }
 
@@ -252,6 +258,8 @@ def issue_view(spec: DocType):
                 messages.error(request, m)
         else:
             messages.success(request, f"{spec.title} {doc.number} を発行しました。")
+            if request.POST.get("download"):
+                return redirect(f"{spec.url('detail', pk)}?download=1")
         return redirect(spec.url("detail", pk))
 
     return view
@@ -274,15 +282,59 @@ def cancel_view(spec: DocType):
     return view
 
 
+_FILENAME_UNSAFE = str.maketrans({c: "_" for c in '\\/:*?"<>|'})
+
+
+def pdf_filename(doc) -> str:
+    """例: 請求書_INV-2026-00001_株式会社サンプル商事.pdf"""
+    parts = [doc.title, doc.number or "下書き", doc.partner.name]
+    return "_".join(parts).translate(_FILENAME_UNSAFE).replace(" ", "") + ".pdf"
+
+
 def pdf_view(spec: DocType):
+    """発行済みは発行時に保存したPDF（控え）を返す。?download=1 でダウンロード。"""
+
     def view(request, pk):
         _require(request, roles.VIEW)
-        doc = get_object_or_404(spec.model, pk=pk)
-        filename = f"{doc.title}_{doc.number or 'draft'}.pdf"
+        doc = get_object_or_404(spec.model.objects.select_related("partner"), pk=pk)
+        download = request.GET.get("download") == "1"
         if doc.pdf_file:
-            return FileResponse(doc.pdf_file.open("rb"), content_type="application/pdf", filename=filename)
+            return FileResponse(
+                doc.pdf_file.open("rb"),
+                content_type="application/pdf",
+                as_attachment=download,
+                filename=pdf_filename(doc),
+            )
         response = HttpResponse(document_pdf(doc, spec.pdf_template), content_type="application/pdf")
-        response["Content-Disposition"] = "inline"
+        disposition = "attachment" if download else "inline"
+        response["Content-Disposition"] = f"{disposition}; filename*=UTF-8''{quote(pdf_filename(doc))}"
+        return response
+
+    return view
+
+
+def pdf_zip_view(spec: DocType):
+    """一覧で選んだ発行済み帳票のPDFをZIPでまとめてダウンロードする。"""
+
+    @require_POST
+    def view(request):
+        _require(request, roles.VIEW)
+        docs = (
+            spec.model.objects.filter(pk__in=request.POST.getlist("ids"))
+            .exclude(pdf_file="")
+            .select_related("partner")
+        )
+        if not docs:
+            messages.error(request, "PDFをダウンロードできる発行済みの帳票を選択してください。")
+            return redirect(spec.url("list"))
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for doc in docs:
+                with doc.pdf_file.open("rb") as f:
+                    archive.writestr(pdf_filename(doc), f.read())
+        name = f"{spec.title}_{timezone.localdate():%Y%m%d}_{len(docs)}件.zip"
+        response = HttpResponse(buffer.getvalue(), content_type="application/zip")
+        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(name)}"
         return response
 
     return view
@@ -310,6 +362,7 @@ def doc_urlpatterns(spec: DocType, prefix: str) -> list:
         path(f"{prefix}/<int:pk>/issue/", issue_view(spec), name=f"{spec.key}_issue"),
         path(f"{prefix}/<int:pk>/cancel/", cancel_view(spec), name=f"{spec.key}_cancel"),
         path(f"{prefix}/<int:pk>/pdf/", pdf_view(spec), name=f"{spec.key}_pdf"),
+        path(f"{prefix}/pdf-zip/", pdf_zip_view(spec), name=f"{spec.key}_pdf_zip"),
         path(f"{prefix}/<int:pk>/copy/", copy_view(spec), name=f"{spec.key}_copy"),
     ]
 

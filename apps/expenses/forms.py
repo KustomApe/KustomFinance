@@ -29,7 +29,10 @@ class LineForm(StyledFormMixin, forms.ModelForm):
             "description",
             "receipt",
         ]
-        widgets = {"date": DateInput()}
+        widgets = {
+            "date": DateInput(),
+            "receipt": forms.ClearableFileInput(attrs={"accept": "image/*,video/*,.heic,.heif,.pdf"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

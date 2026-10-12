@@ -3,9 +3,9 @@ export DYLD_FALLBACK_LIBRARY_PATH := /opt/homebrew/lib:$(DYLD_FALLBACK_LIBRARY_P
 TAILWIND := bin/tailwindcss
 TAILWIND_VERSION := v4.1.18
 
-.PHONY: setup dev serve css css-watch migrate test lint tailwind
+.PHONY: setup dev serve css css-watch migrate test lint tailwind ocr-data
 
-setup: tailwind
+setup: tailwind ocr-data
 	uv sync
 	uv run manage.py migrate
 	$(MAKE) css
@@ -37,3 +37,10 @@ test:
 
 lint:
 	uv run ruff check . && uv run ruff format --check .
+
+# レシートOCR用の日本語データ（Tesseract）。Homebrew の tesseract に日本語が入っていない場合に使う
+TESSDATA := bin/tessdata
+ocr-data:
+	@test -f $(TESSDATA)/jpn.traineddata || ( mkdir -p $(TESSDATA) && \
+	  curl -sSfL -o $(TESSDATA)/jpn.traineddata https://github.com/tesseract-ocr/tessdata_best/raw/main/jpn.traineddata && \
+	  curl -sSfL -o $(TESSDATA)/eng.traineddata https://github.com/tesseract-ocr/tessdata_best/raw/main/eng.traineddata )

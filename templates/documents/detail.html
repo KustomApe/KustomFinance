@@ -8,13 +8,15 @@
   </div>
   <div class="flex flex-wrap gap-2">
     <a class="btn" href="{{ list_url }}">一覧へ</a>
-    <a class="btn" href="{{ urls.pdf }}" target="_blank">PDF{% if doc.is_draft %}（プレビュー）{% endif %}</a>
+    <a class="btn" href="{{ urls.pdf }}" target="_blank">PDFを表示{% if doc.is_draft %}（下書き）{% endif %}</a>
+    {% if not doc.is_draft %}<a class="btn" href="{{ urls.pdf }}?download=1">PDFをダウンロード</a>{% endif %}
     {% if request.user|can:"sales_edit" %}
       <form method="post" action="{{ urls.copy }}">{% csrf_token %}<button class="btn">複製</button></form>
       {% if doc.is_draft %}
         <a class="btn" href="{{ urls.edit }}">編集</a>
         <form method="post" action="{{ urls.delete }}" onsubmit="return confirm('下書きを削除しますか？')">{% csrf_token %}<button class="btn">削除</button></form>
-        <form method="post" action="{{ urls.issue }}">{% csrf_token %}<button class="btn btn-primary">{{ spec.issue_label }}</button></form>
+        <form method="post" action="{{ urls.issue }}">{% csrf_token %}<button class="btn {% if not spec.pdf_downloadable %}btn-primary{% endif %}">{{ spec.issue_label }}</button></form>
+        {% if spec.pdf_downloadable %}<form method="post" action="{{ urls.issue }}">{% csrf_token %}<input type="hidden" name="download" value="1"><button class="btn btn-primary">{{ spec.issue_label }}（PDFをダウンロード）</button></form>{% endif %}
       {% endif %}
     {% endif %}
     {% for a in actions %}
@@ -107,5 +109,8 @@
       <button class="btn btn-danger">取り消す</button>
     </div>
   </form>
+{% endif %}
+{% if request.GET.download == "1" and doc.pdf_file %}
+  <script>window.addEventListener("load", () => { window.location.href = "{{ urls.pdf }}?download=1"; });</script>
 {% endif %}
 {% endblock %}

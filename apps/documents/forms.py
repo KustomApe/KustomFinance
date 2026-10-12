@@ -10,7 +10,10 @@ class DocumentForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Document
         fields = ["kind", "source", "transaction_date", "amount", "partner", "partner_name", "title", "file"]
-        widgets = {"transaction_date": DateInput()}
+        widgets = {
+            "transaction_date": DateInput(),
+            "file": forms.ClearableFileInput(attrs={"accept": "image/*,video/*,.heic,.heif,.pdf"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
