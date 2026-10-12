@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
@@ -78,6 +79,7 @@ def claim_edit(request, pk=None):
             "formset": formset,
             "claim": claim,
             "account_taxes": defaults,
+            "ocr_external": settings.OCR_ENGINE == "claude",
         },
     )
 

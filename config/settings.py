@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "apps.assets",
     "apps.documents",
     "apps.reports",
+    "apps.ocr",
 ]
 
 MIDDLEWARE = [
@@ -110,3 +111,10 @@ STORAGES = {
         else "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },
 }
+
+# OCR（レシート読み取り）: tesseract（ローカル、既定） / claude（Claude API。画像が Anthropic に送信される）
+OCR_ENGINE = env("OCR_ENGINE", default="tesseract")
+OCR_CLAUDE_MODEL = env("OCR_CLAUDE_MODEL", default="claude-opus-5-5")
+_tessdata = BASE_DIR / "bin" / "tessdata"
+OCR_TESSDATA_DIR = env("OCR_TESSDATA_DIR", default=str(_tessdata) if _tessdata.exists() else "")
+OCR_MAX_UPLOAD_MB = env.int("OCR_MAX_UPLOAD_MB", default=200)

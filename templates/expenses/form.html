@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load static %}
 {% block title %}経費精算{% endblock %}
 {% block content %}
 <h1 class="page-title mb-6">経費精算{% if claim.pk %}の編集{% if claim.number %} {{ claim.number }}{% endif %}{% else %}の申請{% endif %}</h1>
@@ -26,12 +26,15 @@
           <div class="sm:col-span-2"><label class="mb-1 block text-xs">支払先</label>{{ f.payee }}{{ f.payee.errors }}</div>
           <div class="sm:col-span-2"><label class="mb-1 block text-xs">内容</label>{{ f.description }}{{ f.description.errors }}</div>
           <div class="sm:col-span-2"><label class="mb-1 block text-xs">支払先の登録番号</label>{{ f.payee_registration_number }}{{ f.payee_registration_number.errors }}</div>
-          <div class="sm:col-span-3"><label class="mb-1 block text-xs">領収書{% if f.instance.pk and f.instance.receipt %}（登録済: <a class="link" href="{% url 'expenses:receipt' f.instance.pk %}" target="_blank">表示</a>）{% endif %}</label>{{ f.receipt }}</div>
+          <div class="sm:col-span-3"><label class="mb-1 block text-xs">領収書（画像・動画・PDF）{% if f.instance.pk and f.instance.receipt %}（登録済: <a class="link" href="{% url 'expenses:receipt' f.instance.pk %}" target="_blank">表示</a>）{% endif %}</label>
+            <div class="flex gap-2">{{ f.receipt }}<button type="button" class="btn btn-sm whitespace-nowrap" data-ocr-row="{{ forloop.counter0 }}">読み取る</button></div></div>
           <div class="flex items-center gap-2 pt-5 sm:col-span-3">{{ f.invoice_exempt }}<label for="{{ f.invoice_exempt.id_for_label }}" class="text-xs">インボイス不要の特例（公共交通機関・出張旅費・自動販売機など）</label></div>
         </div>
+        <div class="mt-2" id="ocr-result-{{ forloop.counter0 }}"></div>
       </div>
     {% endfor %}
   </div>
+  <p class="text-xs text-slate-500">領収書を選んで「読み取る」を押すと、日付・金額・支払先・登録番号などを自動で入力します（スマホで撮った動画も使えます）。{% if ocr_external %}<span class="text-amber-700">読み取りには Claude API を使うため、画像が外部（Anthropic）に送信されます。</span>{% endif %}</p>
   <p class="text-xs text-slate-500">明細が足りない場合は、下書き保存すると入力欄が追加されます。登録番号のない領収書（特例を除く）は、経過措置により消費税の一部のみ控除されます。</p>
   <div class="flex gap-2">
     <button class="btn">下書き保存</button>
@@ -39,4 +42,48 @@
     <a class="btn" href="{% if claim.pk %}{% url 'expenses:detail' claim.pk %}{% else %}{% url 'expenses:list' %}{% endif %}">キャンセル</a>
   </div>
 </form>
+<script src="{% static 'js/receipt-ocr.js' %}"></script>
+<script>
+  document.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-ocr-row]");
+    if (!button) return;
+    const row = button.dataset.ocrRow;
+    const field = name => document.getElementById(`id_lines-${row}-${name}`);
+    const box = document.getElementById(`ocr-result-${row}`);
+    const file = field("receipt").files[0];
+    if (!file) { box.innerHTML = '<p class="text-xs text-red-600">先に領収書のファイルを選択してください。</p>'; return; }
+    button.disabled = true; button.textContent = "読み取り中…";
+    try {
+      const json = await window.readReceipt(file);
+      const d = json.data, s = json.suggestion;
+      const fill = (r, name, value) => { const el = document.getElementById(`id_lines-${r}-${name}`); if (el && value !== "" && value != null) el.value = value; };
+      const fillRow = (r, amount, taxId, note) => {
+        fill(r, "date", d.date); fill(r, "payee", d.payee.slice(0, 100)); fill(r, "payee_registration_number", d.registration_number);
+        fill(r, "amount", amount); fill(r, "tax_category", taxId);
+        const account = document.getElementById(`id_lines-${r}-account`);
+        if (s.account_id && account && !account.value && [...account.options].some(o => o.value == s.account_id)) account.value = s.account_id;
+        const names = d.items.filter(i => note === null || i.reduced === (note === "8")).map(i => i.name).join("、");
+        fill(r, "description", (names || d.payee).slice(0, 200));
+      };
+      let message = "読み取りました";
+      if (s.lines.length > 1) {
+        // 10% と 8% が混在するレシートは税率ごとに明細を分ける
+        const blank = [...document.querySelectorAll("[id$='-amount']")].map(el => el.id.match(/lines-(\d+)-amount/)[1])
+          .find(r => r !== row && !document.getElementById(`id_lines-${r}-amount`).value);
+        const [first, second] = s.lines;
+        fillRow(row, first.amount, first.tax_category_id, String(first.rate));
+        if (blank !== undefined) { fillRow(blank, second.amount, second.tax_category_id, String(second.rate));
+          message = `税率ごとに2行に分けて入力しました（${first.rate}%：明細${Number(row) + 1}、${second.rate}%：明細${Number(blank) + 1}）`; }
+        else { fill(row, "amount", d.total); message = "税率が混在しています。空いている明細行がないため合計額を入力しました"; }
+      } else {
+        fillRow(row, d.total ?? (s.lines[0] && s.lines[0].amount), s.lines[0] && s.lines[0].tax_category_id, null);
+      }
+      window.renderOcrResult(box, json, message);
+    } catch (e) {
+      box.innerHTML = `<p class="text-xs text-red-600">${e.message}</p>`;
+    } finally {
+      button.disabled = false; button.textContent = "読み取る";
+    }
+  });
+</script>
 {% endblock %}

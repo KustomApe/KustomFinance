@@ -1,0 +1,44 @@
+# GitHub の「リリースノートの自動生成」の設定。
+# Releases → Draft a new release →「Generate release notes」を押したときに、
+# 前のタグからマージされた PR を、下の分類でまとめて並べます。
+#
+# 分類はラベルで決まります。ここに書いたラベルが PR に付いていないと
+# 「その他」へ落ちるので、PR には Issue と同じラベルを付けてください。
+# ラベルの作り方は docs/release.md にあります。
+
+changelog:
+  exclude:
+    labels:
+      - skip-changelog        # リリースノートに出したくない PR に付ける
+    authors:
+      - dependabot
+
+  categories:
+    - title: 互換性のない変更
+      labels:
+        - breaking
+
+    - title: 法令・税制への対応
+      labels:
+        - compliance
+
+    - title: 新しい機能・改善
+      labels:
+        - enhancement
+
+    - title: 不具合の修正
+      labels:
+        - bug
+
+    - title: ドキュメント
+      labels:
+        - documentation
+
+    - title: 保守・依存の更新
+      labels:
+        - chore
+        - dependencies
+
+    - title: その他
+      labels:
+        - "*"

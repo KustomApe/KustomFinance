@@ -1,9 +1,10 @@
 FROM python:3.13-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_PROJECT_ENVIRONMENT=/opt/venv
-# WeasyPrint の依存ライブラリと日本語フォント
+# WeasyPrint の依存ライブラリと日本語フォント、レシートOCR（Tesseract 日本語・ffmpeg）
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk curl postgresql-client \
+      tesseract-ocr tesseract-ocr-jpn ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
 

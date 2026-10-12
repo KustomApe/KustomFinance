@@ -17,21 +17,29 @@
   <div><label class="mb-1 block">キーワード</label><input class="input" name="q" value="{{ request.GET.q }}" placeholder="番号・件名・取引先"></div>
   <button class="btn">検索</button>
 </form>
+<form method="post" action="{{ zip_url }}" x-data="{ n: 0 }">
+{% csrf_token %}
+<div class="mb-2 flex items-center gap-3 text-sm">
+  <button class="btn btn-sm" :disabled="n === 0">選択したPDFをまとめてダウンロード（ZIP）</button>
+  <span class="text-slate-500" x-show="n > 0" x-text="n + '件選択中'"></span>
+</div>
 <div class="card overflow-x-auto">
   <table class="table">
-    <thead><tr><th>番号</th><th>発行日</th><th>取引先</th><th>件名</th><th class="text-right">合計（税込）</th><th>状態</th></tr></thead>
+    <thead><tr><th class="w-8"><input type="checkbox" class="checkbox" title="すべて選択" @change="document.querySelectorAll('input[name=ids]:not(:disabled)').forEach(c => c.checked = $event.target.checked); n = document.querySelectorAll('input[name=ids]:checked').length"></th><th>番号</th><th>発行日</th><th>取引先</th><th>件名</th><th class="text-right">合計（税込）</th><th>状態</th></tr></thead>
     <tbody>
       {% for doc in page %}
         <tr>
+          <td><input type="checkbox" class="checkbox" name="ids" value="{{ doc.pk }}" {% if not doc.pdf_file %}disabled title="発行済みの帳票のみ"{% endif %} @change="n = document.querySelectorAll('input[name=ids]:checked').length"></td>
           <td class="whitespace-nowrap"><a class="link" href="{{ doc.url }}">{{ doc.number|default:"（下書き）" }}</a></td>
           <td class="whitespace-nowrap">{{ doc.issue_date|date:"Y/m/d" }}</td>
           <td>{{ doc.partner.name }}</td><td>{{ doc.subject }}</td>
           <td class="num">{{ doc.total|yen }}</td>
           <td class="whitespace-nowrap">{% include "components/doc_status.html" %}</td>
         </tr>
-      {% empty %}<tr><td colspan="6" class="py-8 text-center text-slate-500">{{ title }}はありません。</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="7" class="py-8 text-center text-slate-500">{{ title }}はありません。</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
+</form>
 {% include "components/pagination.html" %}
 {% endblock %}
