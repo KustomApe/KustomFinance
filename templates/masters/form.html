@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">{{ title }}{% if object %}の編集: {{ object }}{% else %}の登録{% endif %}</h1>
+<form method="post" class="card card-body max-w-4xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" with wide=m.wide_fields %}
+  <div class="mt-6 flex gap-2"><button class="btn btn-primary">保存</button><a class="btn" href="{{ list_url }}">戻る</a></div>
+</form>
+{% endblock %}

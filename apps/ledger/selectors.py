@@ -166,17 +166,19 @@ def counterpart_name(line: JournalLine, lines: list[JournalLine]) -> str:
 
 
 def general_ledger(
-    account: Account, date_from: datetime.date, date_to: datetime.date, sub_account=None
+    account: Account, date_from: datetime.date, date_to: datetime.date, sub_account=None, partner=None
 ) -> tuple[Decimal, list[LedgerEntry]]:
     base = Q(account=account)
     if sub_account:
         base &= Q(sub_account=sub_account)
+    if partner:
+        base &= Q(partner=partner)
     fy_start = fiscal_year_start(date_from)
     opening_sums = JournalLine.objects.filter(base & _opening_condition(date_from, fy_start)).aggregate(
         **_sums(None)
     )
     opening = _signed(account, opening_sums["dr"], opening_sums["cr"])
-    if account.system_key == "retained_earnings" and not sub_account:
+    if account.system_key == "retained_earnings" and not sub_account and not partner:
         opening += prior_years_profit(fy_start)
     lines = list(
         JournalLine.objects.filter(base, journal__date__gte=date_from, journal__date__lte=date_to)

@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">{{ title }}</h1>
+  {% if request.user|can:"sales_edit" %}<a class="btn btn-primary" href="{{ new_url }}">＋ 新規作成</a>{% endif %}
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">状態</label>
+    <select name="status" class="select"><option value="">すべて</option>
+      {% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  <div><label class="mb-1 block">取引先</label>
+    <select name="partner" class="select"><option value="">すべて</option>
+      {% for p in partners %}<option value="{{ p.pk }}" {% if request.GET.partner == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+  <div><label class="mb-1 block">発行日</label>
+    <div class="flex items-center gap-1"><input type="date" class="input" name="date_from" value="{{ request.GET.date_from }}">〜<input type="date" class="input" name="date_to" value="{{ request.GET.date_to }}"></div></div>
+  <div><label class="mb-1 block">キーワード</label><input class="input" name="q" value="{{ request.GET.q }}" placeholder="番号・件名・取引先"></div>
+  <button class="btn">検索</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>番号</th><th>発行日</th><th>取引先</th><th>件名</th><th class="text-right">合計（税込）</th><th>状態</th></tr></thead>
+    <tbody>
+      {% for doc in page %}
+        <tr>
+          <td class="whitespace-nowrap"><a class="link" href="{{ doc.url }}">{{ doc.number|default:"（下書き）" }}</a></td>
+          <td class="whitespace-nowrap">{{ doc.issue_date|date:"Y/m/d" }}</td>
+          <td>{{ doc.partner.name }}</td><td>{{ doc.subject }}</td>
+          <td class="num">{{ doc.total|yen }}</td>
+          <td class="whitespace-nowrap">{% include "components/doc_status.html" %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="py-8 text-center text-slate-500">{{ title }}はありません。</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}

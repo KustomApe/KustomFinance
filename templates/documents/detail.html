@@ -1,0 +1,94 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}{{ title }} {{ doc.number|default:"下書き" }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="page-title">{{ title }} {{ doc.number|default:"（下書き）" }} {% include "components/doc_status.html" %}</h1>
+    <p class="mt-1 text-sm text-slate-500">作成: {{ doc.created_at|date:"Y/m/d H:i" }} {{ doc.created_by|default:"" }}{% if doc.issued_at %} ／ 発行: {{ doc.issued_at|date:"Y/m/d H:i" }}{% endif %}</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a class="btn" href="{{ list_url }}">一覧へ</a>
+    <a class="btn" href="{{ urls.pdf }}" target="_blank">PDF{% if doc.is_draft %}（プレビュー）{% endif %}</a>
+    {% if request.user|can:"sales_edit" %}
+      <form method="post" action="{{ urls.copy }}">{% csrf_token %}<button class="btn">複製</button></form>
+      {% if doc.is_draft %}
+        <a class="btn" href="{{ urls.edit }}">編集</a>
+        <form method="post" action="{{ urls.delete }}" onsubmit="return confirm('下書きを削除しますか？')">{% csrf_token %}<button class="btn">削除</button></form>
+        <form method="post" action="{{ urls.issue }}">{% csrf_token %}<button class="btn btn-primary">発行する</button></form>
+      {% endif %}
+      {% for a in actions %}
+        <form method="post" action="{{ a.url }}">{% csrf_token %}<button class="btn {% if a.primary %}btn-primary{% endif %}">{{ a.label }}</button></form>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% if doc.is_draft %}
+  <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">下書きです。「発行する」で番号が採番され、内容が確定します{% if spec.on_issue %}（売上仕訳も計上されます）{% endif %}。発行後は編集できません。</div>
+{% elif doc.status == "cancelled" %}
+  <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{{ doc.cancelled_at|date:"Y/m/d H:i" }} に取り消されました。理由: {{ doc.cancel_reason }}</div>
+{% endif %}
+<div class="grid gap-4 lg:grid-cols-3">
+  <div class="card card-body text-sm lg:col-span-2">
+    <dl class="grid grid-cols-[8rem_1fr] gap-y-2">
+      <dt class="text-slate-500">取引先</dt><dd class="font-medium">{{ doc.partner.display_name }}{% if doc.partner.invoice_registration_number %} <span class="text-xs text-slate-500">{{ doc.partner.invoice_registration_number }}</span>{% endif %}</dd>
+      <dt class="text-slate-500">発行日</dt><dd>{{ doc.issue_date|date:"Y/m/d" }}</dd>
+      <dt class="text-slate-500">件名</dt><dd>{{ doc.subject|default:"-" }}</dd>
+      {% for label, value in fields %}<dt class="text-slate-500">{{ label }}</dt><dd>{% if value.year %}{{ value|date:"Y/m/d" }}{% else %}{{ value|default:"-" }}{% endif %}</dd>{% endfor %}
+      {% if doc.department %}<dt class="text-slate-500">部門</dt><dd>{{ doc.department }}</dd>{% endif %}
+      {% if doc.project %}<dt class="text-slate-500">プロジェクト</dt><dd>{{ doc.project }}</dd>{% endif %}
+      {% if doc.notes %}<dt class="text-slate-500">備考</dt><dd class="whitespace-pre-line">{{ doc.notes }}</dd>{% endif %}
+      {% if doc.journal %}<dt class="text-slate-500">仕訳</dt><dd><a class="link" href="{% url 'ledger:journal_detail' doc.journal_id %}">{{ doc.journal.number }}</a></dd>{% endif %}
+      {% if doc.pdf_sha256 %}<dt class="text-slate-500">PDFハッシュ</dt><dd class="break-all font-mono text-xs text-slate-500">{{ doc.pdf_sha256 }}</dd>{% endif %}
+    </dl>
+  </div>
+  <div class="card card-body text-sm">
+    <table class="w-full">
+      {% for r in doc.tax_rows %}<tr><td class="py-1 text-slate-500">{{ r.label }} 対象</td><td class="num">{{ r.base|yen }}</td></tr>
+        {% if r.tax %}<tr><td class="py-1 pl-3 text-slate-500">消費税</td><td class="num">{{ r.tax|yen }}</td></tr>{% endif %}{% endfor %}
+      <tr class="border-t border-slate-200"><td class="pt-2 font-semibold">合計（税込）</td><td class="num pt-2 text-xl font-bold">{{ doc.total|yen }}</td></tr>
+      {% if doc.payment_status %}
+        <tr><td class="pt-2 text-slate-500">入金済</td><td class="num pt-2">{{ doc.paid_amount|yen }}</td></tr>
+        <tr><td class="text-slate-500">未入金</td><td class="num font-semibold">{{ doc.outstanding|yen }}</td></tr>
+      {% endif %}
+    </table>
+  </div>
+</div>
+<div class="card mt-4 overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>#</th><th>品名・内容</th><th>取引日</th><th class="text-right">数量</th><th>単位</th><th class="text-right">単価</th><th>税率</th><th class="text-right">金額</th></tr></thead>
+    <tbody>
+      {% for ln in lines %}
+        <tr><td class="text-slate-400">{{ forloop.counter }}</td><td>{{ ln.description }}</td><td>{{ ln.transaction_date|date:"Y/m/d" }}</td>
+          <td class="num">{{ ln.quantity|qty }}</td><td>{{ ln.unit }}</td><td class="num">{{ ln.unit_price|qty }}</td>
+          <td>{{ ln.get_tax_rate_display }}</td><td class="num">{{ ln.amount|yen }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if related %}
+  <div class="card card-body mt-4 text-sm">
+    <h2 class="mb-2 font-semibold">関連する帳票</h2>
+    {% for label, docs in related %}
+      <div class="mb-1"><span class="text-slate-500">{{ label }}:</span>
+        {% for d in docs %}{{ d.number|default:"（下書き）" }}{% if d.status == "cancelled" %}（取消）{% endif %}{% if not forloop.last %}、{% endif %}{% endfor %}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% if doc.allocations %}{% with allocs=doc.allocations.all %}{% if allocs %}
+  <div class="card card-body mt-4 text-sm">
+    <h2 class="mb-2 font-semibold">入金消込</h2>
+    {% for a in allocs %}<div><a class="link" href="{% url 'sales:receipt_detail' a.receipt_id %}">{{ a.receipt.number }}</a> {{ a.receipt.date|date:"Y/m/d" }} {{ a.amount|yen }}円{% if a.receipt.status == "cancelled" %}（取消）{% endif %}</div>{% endfor %}
+  </div>
+{% endif %}{% endwith %}{% endif %}
+{% if doc.status == "issued" and can_cancel %}
+  <form method="post" action="{{ urls.cancel }}" class="card card-body mt-6 max-w-2xl" x-data="{ open: false }">
+    {% csrf_token %}
+    <button type="button" class="link text-left text-sm" @click="open = !open">この{{ title }}を取り消す</button>
+    <div x-show="open" x-cloak class="mt-3 space-y-3">
+      <p class="text-sm text-slate-600">発行済みの帳票は削除できません。取り消すと{% if spec.on_cancel %}売上仕訳の取消仕訳が計上され、{% endif %}帳票は「取消」として保存されます。訂正する場合は「複製」から作り直してください。</p>
+      <input class="input" name="reason" required maxlength="200" placeholder="取消理由">
+      <button class="btn btn-danger">取り消す</button>
+    </div>
+  </form>
+{% endif %}
+{% endblock %}

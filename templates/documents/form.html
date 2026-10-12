@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">{{ title }}{% if object %}の編集{% else %}の作成{% endif %}</h1>
+{{ options|json_script:"doc-options" }}
+{{ rows|json_script:"doc-rows" }}
+<script>
+  window.docLines = function () {
+    const opts = JSON.parse(document.getElementById("doc-options").textContent);
+    const initial = JSON.parse(document.getElementById("doc-rows").textContent);
+    const fields = ["item", "transaction_date", "description", "quantity", "unit", "unit_price", "tax_rate"];
+    let seq = 0;
+    const blank = (r = {}) => Object.fromEntries([["key", ++seq], ...fields.map(f => [f, r[f] ?? ""])]);
+    const dec = v => parseFloat(String(v).replace(/,/g, "")) || 0;
+    const round = (v, m) => {
+      const s = v < 0 ? -1 : 1, a = Math.abs(v);
+      return s * (m === "ceil" ? Math.ceil(a - 1e-9) : m === "half_up" ? Math.round(a) : Math.floor(a + 1e-9));
+    };
+    return {
+      opts, rows: initial.length ? initial.map(blank) : [blank({ quantity: "1", tax_rate: "10" })],
+      itemChanged(row) {
+        const it = opts.items.find(i => String(i.id) === String(row.item));
+        if (!it) return;
+        row.description = it.name; row.unit = it.unit; row.unit_price = String(parseFloat(it.price));
+        row.tax_rate = it.tax; if (!row.quantity) row.quantity = "1";
+      },
+      amount(row) { const v = dec(row.quantity) * dec(row.unit_price); return (v < 0 ? -1 : 1) * Math.floor(Math.abs(v) + 1e-9); },
+      add() { this.rows.push(blank({ quantity: "1", tax_rate: this.rows.at(-1)?.tax_rate || "10" })); },
+      remove(i) { this.rows.splice(i, 1); },
+      move(i, d) { const j = i + d; if (j < 0 || j >= this.rows.length) return; [this.rows[i], this.rows[j]] = [this.rows[j], this.rows[i]]; },
+      get summary() {
+        const bases = {};
+        for (const r of this.rows) if (r.description || r.item) bases[r.tax_rate] = (bases[r.tax_rate] || 0) + this.amount(r);
+        return opts.taxRates.filter(t => t.id in bases).map(t => ({
+          label: t.label, base: bases[t.id], tax: round(bases[t.id] * (opts.taxPercent[t.id] || 0) / 100, opts.rounding),
+        }));
+      },
+      get subtotal() { return this.summary.reduce((s, r) => s + r.base, 0); },
+      get tax() { return this.summary.reduce((s, r) => s + r.tax, 0); },
+      fmt(n) { return n.toLocaleString("ja-JP"); },
+    };
+  };
+</script>
+<form method="post" x-data="docLines()" class="space-y-4">
+  {% csrf_token %}
+  {% if errors %}
+    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><ul class="list-disc pl-5">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <div class="card card-body">
+    {% include "components/form_fields.html" with cols="sm:grid-cols-3" wide="notes" %}
+  </div>
+  <input type="hidden" name="lines-TOTAL_FORMS" :value="rows.length">
+  <input type="hidden" name="lines-INITIAL_FORMS" value="0">
+  <input type="hidden" name="lines-MIN_NUM_FORMS" value="0">
+  <input type="hidden" name="lines-MAX_NUM_FORMS" value="300">
+  <div class="card overflow-x-auto">
+    <table class="table min-w-[1200px]">
+      <thead><tr>
+        <th class="w-16"></th><th class="w-40">品目</th><th class="min-w-72">品名・内容 <span class="text-red-500">*</span></th><th class="w-36">取引日</th>
+        <th class="w-24 text-right">数量</th><th class="w-20">単位</th><th class="w-32 text-right">単価</th><th class="w-32">税率</th>
+        <th class="w-28 text-right">金額</th><th class="w-8"></th>
+      </tr></thead>
+      <tbody>
+        <template x-for="(row, i) in rows" :key="row.key">
+          <tr>
+            <td class="pt-3 whitespace-nowrap text-slate-400">
+              <button type="button" @click="move(i, -1)" title="上へ">▲</button><button type="button" @click="move(i, 1)" title="下へ">▼</button>
+            </td>
+            <td><select class="select" :name="`lines-${i}-item`" x-model="row.item" @change="itemChanged(row)">
+              <option value="">—</option>
+              <template x-for="it in opts.items" :key="it.id"><option :value="it.id" x-text="it.label" :selected="String(it.id) === String(row.item)"></option></template>
+            </select></td>
+            <td><input class="input" maxlength="255" :name="`lines-${i}-description`" x-model="row.description"></td>
+            <td><input class="input" type="date" :name="`lines-${i}-transaction_date`" x-model="row.transaction_date"></td>
+            <td><input class="input text-right" type="number" step="any" :name="`lines-${i}-quantity`" x-model="row.quantity"></td>
+            <td><input class="input" maxlength="10" :name="`lines-${i}-unit`" x-model="row.unit"></td>
+            <td><input class="input text-right" type="number" step="any" :name="`lines-${i}-unit_price`" x-model="row.unit_price"></td>
+            <td><select class="select" :name="`lines-${i}-tax_rate`" x-model="row.tax_rate">
+              <template x-for="t in opts.taxRates" :key="t.id"><option :value="t.id" x-text="t.label" :selected="t.id === row.tax_rate"></option></template>
+            </select></td>
+            <td class="num pt-3" x-text="fmt(amount(row))"></td>
+            <td class="pt-2.5"><button type="button" class="text-slate-400 hover:text-red-600" @click="remove(i)" title="削除">✕</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <button type="button" class="btn" @click="add()">＋ 明細を追加</button>
+    <table class="card text-sm">
+      <template x-for="r in summary" :key="r.label">
+        <tr><td class="px-4 py-1 text-slate-600" x-text="r.label + ' 対象'"></td><td class="num px-4" x-text="fmt(r.base)"></td>
+            <td class="px-4 text-slate-600">消費税</td><td class="num px-4" x-text="fmt(r.tax)"></td></tr>
+      </template>
+      <tr class="border-t border-slate-200 font-semibold"><td class="px-4 py-2">小計</td><td class="num px-4" x-text="fmt(subtotal)"></td>
+          <td class="px-4">合計</td><td class="num px-4 text-lg" x-text="fmt(subtotal + tax)"></td></tr>
+    </table>
+  </div>
+  <p class="text-xs text-slate-500">単価は税抜です。消費税は税率ごとに合計してから端数処理します（インボイス制度）。値引きは数量または単価をマイナスで入力します。</p>
+  <div class="flex gap-2">
+    <button class="btn btn-primary">下書き保存</button>
+    <a class="btn" href="{% if object %}{% url spec.namespace|add:':'|add:spec.key|add:'_detail' object.pk %}{% else %}{{ list_url }}{% endif %}">キャンセル</a>
+  </div>
+</form>
+{% endblock %}

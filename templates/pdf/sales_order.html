@@ -1,0 +1,4 @@
+{% extends "pdf/document_base.html" %}
+{% block doc_title %}注文請書{% endblock %}
+{% block lead %}下記のとおりご注文をお請けいたします。{% endblock %}
+{% block extra_meta %}{% if doc.customer_order_number %}<tr><td>貴社注文番号</td><td>{{ doc.customer_order_number }}</td></tr>{% endif %}{% if doc.delivery_date %}<tr><td>納期</td><td>{{ doc.delivery_date|date:"Y年n月j日" }}</td></tr>{% endif %}{% endblock %}

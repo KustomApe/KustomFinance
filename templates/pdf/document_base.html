@@ -1,0 +1,88 @@
+{% load ui %}<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 15mm 14mm 16mm; @bottom-center { content: counter(page) " / " counter(pages); font-size: 8pt; color: #666; } }
+  * { box-sizing: border-box; }
+  body { font-family: "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif; font-size: 9.5pt; color: #222; line-height: 1.5; }
+  h1 { text-align: center; font-size: 20pt; letter-spacing: 0.6em; margin: 0 0 6mm; font-weight: bold; }
+  .head { display: flex; justify-content: space-between; gap: 10mm; }
+  .to { width: 55%; }
+  .to .name { font-size: 13pt; font-weight: bold; border-bottom: 1px solid #222; padding-bottom: 1mm; margin-bottom: 2mm; }
+  .from { width: 42%; position: relative; font-size: 9pt; }
+  .from .company { font-size: 11pt; font-weight: bold; margin-top: 2mm; }
+  .meta td { padding: 0 2mm 0 0; }
+  .seal { position: absolute; right: 0; top: 14mm; width: 22mm; height: 22mm; object-fit: contain; opacity: 0.9; }
+  .total-box { margin: 5mm 0 3mm; border: 1.5px solid #222; display: flex; width: 55%; }
+  .total-box .label { background: #eef2f7; padding: 2mm 4mm; font-weight: bold; }
+  .total-box .value { padding: 2mm 4mm; font-size: 14pt; font-weight: bold; flex: 1; text-align: right; }
+  table.lines { width: 100%; border-collapse: collapse; margin-top: 4mm; }
+  table.lines th { background: #eef2f7; border: 0.6px solid #999; padding: 1.5mm 2mm; font-weight: bold; font-size: 8.5pt; }
+  table.lines td { border: 0.6px solid #999; padding: 1.4mm 2mm; vertical-align: top; }
+  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .summary { display: flex; justify-content: flex-end; margin-top: 3mm; }
+  .summary table { border-collapse: collapse; min-width: 85mm; }
+  .summary td { border: 0.6px solid #999; padding: 1.2mm 3mm; }
+  .summary td:first-child { background: #f6f8fb; }
+  .summary .grand td { font-weight: bold; font-size: 11pt; }
+  .notes { margin-top: 5mm; border: 0.6px solid #999; padding: 2mm 3mm; min-height: 14mm; white-space: pre-line; }
+  .small { font-size: 8pt; color: #555; }
+  .draft { position: fixed; top: 110mm; left: 0; right: 0; text-align: center; font-size: 70pt; color: rgba(220, 38, 38, 0.15); transform: rotate(-25deg); font-weight: bold; }
+</style>
+</head>
+<body>
+{% if doc.is_draft %}<div class="draft">下書き</div>{% endif %}
+{% if doc.status == "cancelled" %}<div class="draft">取消</div>{% endif %}
+<h1>{% block doc_title %}{{ doc.title }}{% endblock %}</h1>
+<div class="head">
+  <div class="to">
+    <div class="name">{{ doc.partner.name }} {{ doc.partner.honorific }}</div>
+    {% if doc.partner.address %}<div class="small">{% if doc.partner.postal_code %}〒{{ doc.partner.postal_code }} {% endif %}{{ doc.partner.address }}</div>{% endif %}
+    {% if doc.subject %}<p style="margin-top:4mm">件名：{{ doc.subject }}</p>{% endif %}
+    <p>{% block lead %}下記のとおりご案内申し上げます。{% endblock %}</p>
+  </div>
+  <div class="from">
+    <table class="meta">
+      <tr><td>番号</td><td>{{ doc.number|default:"（下書き）" }}</td></tr>
+      <tr><td>{% block date_label %}発行日{% endblock %}</td><td>{{ doc.issue_date|date:"Y年n月j日" }}</td></tr>
+      {% block extra_meta %}{% endblock %}
+    </table>
+    <div class="company">{{ company.name }}</div>
+    {% if company.address %}<div>{% if company.postal_code %}〒{{ company.postal_code }} {% endif %}{{ company.address }}</div>{% endif %}
+    {% if company.phone %}<div>TEL {{ company.phone }}{% if company.fax %}　FAX {{ company.fax }}{% endif %}</div>{% endif %}
+    {% if company.invoice_registration_number %}<div>登録番号：{{ company.invoice_registration_number }}</div>{% endif %}
+    {% if company.seal_image %}<img class="seal" src="file://{{ company.seal_image.path }}">{% endif %}
+  </div>
+</div>
+<div class="total-box"><div class="label">{% block total_label %}合計金額{% endblock %}</div><div class="value">¥{{ doc.total|yen }}-<span class="small">（税込）</span></div></div>
+{% block before_lines %}{% endblock %}
+<table class="lines">
+  <thead><tr>
+    {% if has_dates %}<th style="width:20mm">取引日</th>{% endif %}
+    <th>品名・内容</th><th style="width:16mm">数量</th><th style="width:12mm">単位</th><th style="width:24mm">単価</th><th style="width:27mm">金額</th>
+  </tr></thead>
+  <tbody>
+    {% for ln in lines %}
+      <tr>
+        {% if has_dates %}<td>{{ ln.transaction_date|date:"n/j" }}</td>{% endif %}
+        <td>{{ ln.description }}{% if ln.tax_rate == "8R" %} ※{% endif %}{% if ln.tax_rate == "exempt" %}（非課税）{% elif ln.tax_rate == "export" %}（免税）{% elif ln.tax_rate == "none" %}（対象外）{% endif %}</td>
+        <td class="num">{{ ln.quantity|qty }}</td><td>{{ ln.unit }}</td><td class="num">{{ ln.unit_price|qty }}</td><td class="num">{{ ln.amount|yen }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="summary">
+  <table>
+    {% for r in doc.tax_rows %}
+      <tr><td>{% if r.rate == "10" or r.rate == "8R" %}{{ r.label }}対象{% else %}{{ r.label }}{% endif %}</td><td class="num">{{ r.base|yen }}円</td></tr>
+      {% if r.rate == "10" or r.rate == "8R" %}<tr><td>　消費税（{{ r.label }}）</td><td class="num">{{ r.tax|yen }}円</td></tr>{% endif %}
+    {% endfor %}
+    <tr class="grand"><td>合計（税込）</td><td class="num">{{ doc.total|yen }}円</td></tr>
+  </table>
+</div>
+{% if doc.has_reduced_rate %}<p class="small">※印は軽減税率（8%）対象です。</p>{% endif %}
+{% block after_lines %}{% endblock %}
+{% if doc.notes %}<div class="notes"><div class="small">備考</div>{{ doc.notes }}</div>{% endif %}
+</body>
+</html>

@@ -49,3 +49,25 @@ def yen(value):
 @register.filter
 def can(user, capability):
     return user.can(capability)
+
+
+@register.filter
+def qty(value):
+    """数量・単価: 小数部が0なら整数表示、それ以外は必要な桁だけ表示。"""
+    if value in (None, ""):
+        return ""
+    value = Decimal(value)
+    if value == value.to_integral():
+        return f"{value:,.0f}"
+    return f"{value.normalize():,f}"
+
+
+@register.filter
+def cell(value):
+    if value is True:
+        return "✓"
+    if value is False:
+        return ""
+    if isinstance(value, Decimal):
+        return qty(value)
+    return "" if value is None else value

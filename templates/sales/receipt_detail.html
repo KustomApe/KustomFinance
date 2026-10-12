@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}入金 {{ receipt.number }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">入金 {{ receipt.number }} {% if receipt.status == "cancelled" %}<span class="badge badge-red">取消</span>{% endif %}</h1>
+  <a class="btn" href="{% url 'sales:receipts' %}">一覧へ</a>
+</div>
+<div class="card card-body mb-4 text-sm">
+  <dl class="grid grid-cols-[8rem_1fr] gap-y-2">
+    <dt class="text-slate-500">取引先</dt><dd>{{ receipt.partner.name }}</dd>
+    <dt class="text-slate-500">入金日</dt><dd>{{ receipt.date|date:"Y/m/d" }}</dd>
+    <dt class="text-slate-500">入金口座</dt><dd>{{ receipt.deposit_account.name }}{% if receipt.deposit_sub_account %} / {{ receipt.deposit_sub_account.name }}{% endif %}</dd>
+    <dt class="text-slate-500">入金額</dt><dd>{{ receipt.amount|yen }}円</dd>
+    <dt class="text-slate-500">振込手数料</dt><dd>{{ receipt.fee|yen }}円</dd>
+    <dt class="text-slate-500">前受金</dt><dd>{{ receipt.advance_amount|yen }}円</dd>
+    <dt class="text-slate-500">メモ</dt><dd>{{ receipt.memo|default:"-" }}</dd>
+    <dt class="text-slate-500">仕訳</dt><dd>{% if receipt.journal %}<a class="link" href="{% url 'ledger:journal_detail' receipt.journal_id %}">{{ receipt.journal.number }}</a>{% endif %}</dd>
+  </dl>
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>請求書番号</th><th>請求日</th><th class="text-right">請求額</th><th class="text-right">消込額</th></tr></thead>
+    <tbody>{% for a in allocations %}<tr><td><a class="link" href="{% url 'sales:invoice_detail' a.invoice_id %}">{{ a.invoice.number }}</a></td><td>{{ a.invoice.issue_date|date:"Y/m/d" }}</td><td class="num">{{ a.invoice.total|yen }}</td><td class="num">{{ a.amount|yen }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-slate-500">消込はありません。</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% if receipt.status == "active" and request.user|can:"ledger_edit" %}
+  <form method="post" class="card card-body mt-6 max-w-xl space-y-3" x-data="{ open: false }">
+    {% csrf_token %}
+    <button type="button" class="link text-left text-sm" @click="open = !open">この入金を取り消す</button>
+    <div x-show="open" x-cloak class="space-y-3"><input class="input" name="reason" required maxlength="200" placeholder="取消理由"><button class="btn btn-danger">取り消す</button></div>
+  </form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,2 @@
+{% if doc.status == "draft" %}<span class="badge badge-yellow">下書き</span>{% elif doc.status == "issued" %}<span class="badge badge-green">発行済</span>{% else %}<span class="badge badge-red">取消</span>{% endif %}
+{% if doc.payment_status %}<span class="badge {% if doc.payment_status == '入金済' %}badge-blue{% elif doc.payment_status == '一部入金' %}badge-yellow{% else %}badge-gray{% endif %}">{{ doc.payment_status }}</span>{% endif %}

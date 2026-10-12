@@ -1,0 +1,10 @@
+{% extends "pdf/document_base.html" %}
+{% block doc_title %}請求書{% endblock %}
+{% block lead %}下記のとおりご請求申し上げます。{% endblock %}
+{% block date_label %}請求日{% endblock %}
+{% block extra_meta %}{% if doc.due_date %}<tr><td>お支払期限</td><td>{{ doc.due_date|date:"Y年n月j日" }}</td></tr>{% endif %}{% endblock %}
+{% block total_label %}ご請求金額{% endblock %}
+{% block after_lines %}
+  {% if company.bank_account_info %}<div class="notes" style="min-height:0"><div class="small">お振込先</div>{{ company.bank_account_info }}</div>
+  <p class="small">恐れ入りますが、振込手数料は貴社にてご負担ください。</p>{% endif %}
+{% endblock %}

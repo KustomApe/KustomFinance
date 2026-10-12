@@ -1,8 +1,9 @@
 """仕訳の登録・取消。すべての取引（販売・購買・経費・銀行・償却）はここを経由して記帳する。"""
 
 import datetime
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
+from typing import Any
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -32,7 +33,9 @@ class LineInput:
     tax_amount: Decimal | None = None
     sub_account: SubAccount | None = None
     description: str = ""
-    extra: dict = field(default_factory=dict)
+    partner: Any = None
+    department: Any = None
+    project: Any = None
 
 
 def calc_included_tax(
@@ -133,6 +136,9 @@ def post_journal(
             tax_category=line.tax_category,
             tax_amount=tax,
             description=line.description or description,
+            partner=line.partner,
+            department=line.department,
+            project=line.project,
         )
         if tax:
             line_no += 1
@@ -144,6 +150,9 @@ def post_journal(
                 amount=tax,
                 tax_base=base,
                 description=line.description or description,
+                partner=line.partner,
+                department=line.department,
+                project=line.project,
             )
     return journal
 
@@ -167,6 +176,9 @@ def reverse_journal(journal: Journal, date: datetime.date, reason: str, *, user=
             tax_amount=line.tax_amount,
             sub_account=line.sub_account,
             description=line.description,
+            partner=line.partner,
+            department=line.department,
+            project=line.project,
         )
         for line in journal.lines.filter(tax_base__isnull=True).select_related("account", "tax_category")
     ]

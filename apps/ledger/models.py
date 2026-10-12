@@ -241,6 +241,30 @@ class JournalLine(models.Model):
         related_name="+",
     )
     description = models.CharField("摘要", max_length=255, blank=True)
+    partner = models.ForeignKey(
+        "masters.Partner",
+        verbose_name="取引先",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    department = models.ForeignKey(
+        "masters.Department",
+        verbose_name="部門",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    project = models.ForeignKey(
+        "masters.Project",
+        verbose_name="プロジェクト",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
 
     class Meta:
         verbose_name = "仕訳明細"

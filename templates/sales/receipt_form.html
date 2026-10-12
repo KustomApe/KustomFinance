@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}入金の登録{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">入金の登録</h1>
+<form method="get" class="card card-body mb-4 flex items-end gap-3 text-sm">
+  <div><label class="mb-1 block">取引先</label>
+    <select name="partner" class="select" onchange="this.form.submit()"><option value="">選択してください</option>
+      {% for p in partners %}<option value="{{ p.pk }}" {% if partner == p %}selected{% endif %}>{{ p.code }} {{ p.name }}</option>{% endfor %}</select></div>
+</form>
+{% if partner %}
+<form method="post" class="space-y-4" x-data="receiptForm()">
+  {% csrf_token %}
+  <input type="hidden" name="partner" value="{{ partner.pk }}">
+  <div class="card card-body">{% include "components/form_fields.html" with cols="sm:grid-cols-3" %}</div>
+  <div class="card overflow-x-auto">
+    <div class="flex items-center justify-between px-4 pt-4">
+      <h2 class="font-semibold">未入金の請求書</h2>
+      <button type="button" class="btn btn-sm" @click="auto()">古い順に自動で割り当て</button>
+    </div>
+    <table class="table mt-2">
+      <thead><tr><th>請求書番号</th><th>請求日</th><th>支払期日</th><th class="text-right">請求額</th><th class="text-right">未入金額</th><th class="w-40 text-right">消込額</th></tr></thead>
+      <tbody>
+        {% for inv in invoices %}
+          <tr>
+            <td><a class="link" href="{% url 'sales:invoice_detail' inv.pk %}" target="_blank">{{ inv.number }}</a></td>
+            <td>{{ inv.issue_date|date:"Y/m/d" }}</td><td>{{ inv.due_date|date:"Y/m/d" }}</td>
+            <td class="num">{{ inv.total|yen }}</td><td class="num">{{ inv.outstanding|yen }}</td>
+            <td><input class="input text-right" type="number" min="0" max="{{ inv.outstanding }}" name="alloc-{{ inv.pk }}" data-outstanding="{{ inv.outstanding }}" x-ref="a{{ forloop.counter0 }}" value="{{ inv.posted_alloc|default:'' }}" @input="sum()"></td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="py-6 text-center text-slate-500">未入金の請求書はありません（全額が前受金になります）。</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr class="font-semibold"><td colspan="5" class="text-right">消込合計 / 前受金</td>
+        <td class="num"><span x-text="allocated.toLocaleString('ja-JP')"></span> / <span x-text="(available - allocated).toLocaleString('ja-JP')"></span></td></tr></tfoot>
+    </table>
+  </div>
+  <button class="btn btn-primary">入金を登録</button>
+  <p class="text-xs text-slate-500">仕訳: 入金口座・支払手数料 / 売掛金（消込額）・前受金（残額）。振込手数料を差し引かれて入金された場合は、手数料欄に差額を入力すると請求額全額を消し込めます。</p>
+</form>
+<script>
+  window.receiptForm = function () {
+    return {
+      allocated: 0, available: 0,
+      inputs() { return [...document.querySelectorAll("input[name^='alloc-']")]; },
+      init() { this.$nextTick(() => this.sum()); document.querySelectorAll("#id_amount, #id_fee").forEach(e => e.addEventListener("input", () => this.sum())); },
+      sum() {
+        const v = id => parseInt(document.getElementById(id)?.value || 0, 10) || 0;
+        this.available = v("id_amount") + v("id_fee");
+        this.allocated = this.inputs().reduce((s, e) => s + (parseInt(e.value || 0, 10) || 0), 0);
+      },
+      auto() {
+        this.sum();
+        let rest = this.available;
+        for (const e of this.inputs()) { const a = Math.min(rest, parseInt(e.dataset.outstanding, 10)); e.value = a > 0 ? a : ""; rest -= Math.max(a, 0); }
+        this.sum();
+      },
+    };
+  };
+</script>
+{% endif %}
+{% endblock %}

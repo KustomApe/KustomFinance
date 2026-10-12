@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}入金・消込{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">入金・消込</h1>
+  {% if request.user|can:"ledger_edit" %}<a class="btn btn-primary" href="{% url 'sales:receipt_new' %}">＋ 入金を登録</a>{% endif %}
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">取引先</label>
+    <select name="partner" class="select"><option value="">すべて</option>
+      {% for p in partners %}<option value="{{ p.pk }}" {% if request.GET.partner == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+  <div><label class="mb-1 block">キーワード</label><input class="input" name="q" value="{{ request.GET.q }}"></div>
+  <button class="btn">検索</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>入金番号</th><th>入金日</th><th>取引先</th><th>入金口座</th><th class="text-right">入金額</th><th class="text-right">手数料</th><th>状態</th></tr></thead>
+    <tbody>
+      {% for r in page %}
+        <tr><td><a class="link" href="{% url 'sales:receipt_detail' r.pk %}">{{ r.number }}</a></td><td>{{ r.date|date:"Y/m/d" }}</td>
+          <td>{{ r.partner.name }}</td><td>{{ r.deposit_account.name }}</td><td class="num">{{ r.amount|yen }}</td><td class="num">{{ r.fee|yen }}</td>
+          <td>{% if r.status == "cancelled" %}<span class="badge badge-red">取消</span>{% else %}<span class="badge badge-green">有効</span>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="7" class="py-8 text-center text-slate-500">入金はありません。</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}

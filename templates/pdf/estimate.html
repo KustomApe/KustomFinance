@@ -1,0 +1,6 @@
+{% extends "pdf/document_base.html" %}
+{% block doc_title %}御見積書{% endblock %}
+{% block lead %}下記のとおりお見積り申し上げます。{% endblock %}
+{% block extra_meta %}{% if doc.valid_until %}<tr><td>有効期限</td><td>{{ doc.valid_until|date:"Y年n月j日" }}</td></tr>{% endif %}{% endblock %}
+{% block total_label %}お見積金額{% endblock %}
+{% block before_lines %}{% if doc.delivery_terms %}<p>納期・納入条件：{{ doc.delivery_terms }}</p>{% endif %}{% endblock %}
