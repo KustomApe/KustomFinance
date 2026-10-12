@@ -1,0 +1,8 @@
+.venv
+.git
+.env
+bin
+media
+staticfiles
+backups
+**/__pycache__

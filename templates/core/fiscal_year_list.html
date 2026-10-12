@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}会計期間{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">会計期間</h1>
+  {% if request.user|can:"period_close" %}<a class="btn btn-primary" href="{% url 'core:fiscal_year_new' %}">＋ 新規登録</a>{% endif %}
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>名称</th><th>期首日</th><th>期末日</th><th>状態</th><th></th></tr></thead>
+    <tbody>
+      {% for fy in fiscal_years %}
+        <tr>
+          <td>{{ fy.name }}</td><td>{{ fy.start_date|date:"Y/m/d" }}</td><td>{{ fy.end_date|date:"Y/m/d" }}</td>
+          <td>{% if fy.is_closed %}<span class="badge badge-gray">締め済み</span>{% else %}<span class="badge badge-green">記帳中</span>{% endif %}</td>
+          <td class="text-right">{% if not fy.is_closed and request.user|can:"period_close" %}<a class="link" href="{% url 'core:fiscal_year_edit' fy.pk %}">編集</a>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="py-8 text-center text-slate-500">会計期間が登録されていません。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

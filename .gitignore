@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+bin/
+static/css/app.css
+staticfiles/
+media/
+backups/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store

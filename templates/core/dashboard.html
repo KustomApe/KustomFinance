@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}ダッシュボード{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">ダッシュボード</h1>
+{% if not company.invoice_registration_number or not fiscal_year %}
+  <div class="card card-body mb-6 border-amber-200 bg-amber-50 text-sm text-amber-900">
+    <p class="font-semibold">初期設定が完了していません</p>
+    <ul class="mt-2 list-disc pl-5">
+      {% if not company.invoice_registration_number %}<li><a class="link" href="{% url 'core:company' %}">自社情報</a>で会社名・適格請求書発行事業者登録番号を設定してください。</li>{% endif %}
+      {% if not fiscal_year %}<li><a class="link" href="{% url 'core:fiscal_years' %}">会計期間</a>を登録してください。</li>{% endif %}
+    </ul>
+  </div>
+{% endif %}
+<div class="grid gap-4 sm:grid-cols-3">
+  <div class="card card-body"><div class="text-sm text-slate-500">会計期間</div>
+    <div class="mt-1 font-semibold">{{ fiscal_year|default:"未登録" }}</div></div>
+</div>
+{% endblock %}

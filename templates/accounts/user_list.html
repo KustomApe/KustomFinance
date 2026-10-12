@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}ユーザー{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">ユーザー</h1>
+  <a class="btn btn-primary" href="{% url 'accounts:user_new' %}">＋ 新規作成</a>
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>ユーザー名</th><th>表示名</th><th>ロール</th><th>状態</th><th>最終ログイン</th><th></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td><td>{{ u.display_name }}</td>
+          <td><span class="badge badge-blue">{{ u.get_role_display }}</span>{% if u.is_superuser %} <span class="badge badge-yellow">スーパーユーザー</span>{% endif %}</td>
+          <td>{% if u.is_active %}<span class="badge badge-green">有効</span>{% else %}<span class="badge badge-gray">無効</span>{% endif %}</td>
+          <td>{{ u.last_login|date:"Y/m/d H:i"|default:"-" }}</td>
+          <td class="text-right"><a class="link" href="{% url 'accounts:user_edit' u.pk %}">編集</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card card-body mt-6 text-sm text-slate-600">
+  <p class="mb-2 font-semibold text-slate-800">ロールの権限</p>
+  <ul class="list-disc space-y-1 pl-5">
+    <li><b>管理者</b>: すべての操作（自社設定・ユーザー管理を含む）</li>
+    <li><b>経理</b>: 仕訳・入出金・承認・期間締めなど経理操作</li>
+    <li><b>営業・購買</b>: 見積・受注・請求・発注の作成、経費申請</li>
+    <li><b>閲覧のみ</b>: 画面の閲覧</li>
+  </ul>
+</div>
+{% endblock %}

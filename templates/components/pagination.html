@@ -1,0 +1,10 @@
+{% if page.paginator.num_pages > 1 %}
+<div class="mt-4 flex items-center justify-between text-sm text-slate-600">
+  <div>{{ page.paginator.count }}件中 {{ page.start_index }}〜{{ page.end_index }}件</div>
+  <div class="flex gap-2">
+    {% if page.has_previous %}<a class="btn btn-sm" href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page.previous_page_number }}">前へ</a>{% endif %}
+    <span class="px-2 py-1">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn btn-sm" href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}page={{ page.next_page_number }}">次へ</a>{% endif %}
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@source "../../templates";
+@source "../../apps";
+
+@theme {
+  --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  --color-brand-50: oklch(0.97 0.02 250);
+  --color-brand-100: oklch(0.93 0.04 250);
+  --color-brand-600: oklch(0.50 0.15 255);
+  --color-brand-700: oklch(0.43 0.14 255);
+  --color-brand-900: oklch(0.28 0.08 255);
+}
+
+@layer components {
+  .input, .select, .file-input {
+    @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm shadow-xs
+      focus:border-brand-600 focus:ring-2 focus:ring-brand-100 focus:outline-none
+      disabled:bg-slate-100;
+  }
+  .file-input { @apply px-1 py-1; }
+  .checkbox { @apply size-4 rounded border-slate-300 text-brand-600; }
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5
+      text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 cursor-pointer
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary { @apply border-brand-600 bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-danger { @apply border-red-600 bg-red-600 text-white hover:bg-red-700; }
+  .btn-sm { @apply px-2 py-1 text-xs; }
+  .card { @apply rounded-lg border border-slate-200 bg-white shadow-xs; }
+  .card-body { @apply p-5; }
+  .table { @apply w-full text-sm; }
+  .table th { @apply border-b border-slate-200 bg-slate-50 px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap; }
+  .table td { @apply border-b border-slate-100 px-3 py-2 align-top; }
+  .table tbody tr:hover { @apply bg-slate-50; }
+  .num { @apply text-right tabular-nums whitespace-nowrap; }
+  .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
+  .badge-gray { @apply bg-slate-100 text-slate-700; }
+  .badge-green { @apply bg-emerald-100 text-emerald-800; }
+  .badge-blue { @apply bg-brand-100 text-brand-700; }
+  .badge-yellow { @apply bg-amber-100 text-amber-800; }
+  .badge-red { @apply bg-red-100 text-red-800; }
+  .link { @apply text-brand-600 hover:underline; }
+  .page-title { @apply text-xl font-bold text-slate-900; }
+  .errorlist { @apply mt-1 text-xs text-red-600; }
+}

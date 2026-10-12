@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}自社情報{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">自社情報</h1>
+<form method="post" enctype="multipart/form-data" class="card card-body max-w-4xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" with wide="address bank_account_info" %}
+  <div class="mt-6"><button class="btn btn-primary">保存</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}操作ログ{% endblock %}
+{% block content %}
+<h1 class="page-title mb-2">操作ログ</h1>
+<p class="mb-4 text-sm text-slate-500">すべての登録・変更・削除の履歴です（電子帳簿保存法の訂正削除履歴）。この記録は変更・削除できません。</p>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">操作</label>
+    <select name="action" class="select">
+      <option value="">すべて</option>
+      {% for value, label in actions %}<option value="{{ value }}" {% if request.GET.action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select></div>
+  <div><label class="mb-1 block">対象</label><input class="input" name="q" value="{{ request.GET.q }}"></div>
+  <div><label class="mb-1 block">期間</label>
+    <div class="flex items-center gap-1"><input type="date" class="input" name="from" value="{{ request.GET.from }}">〜<input type="date" class="input" name="to" value="{{ request.GET.to }}"></div></div>
+  <button class="btn">検索</button>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>日時</th><th>ユーザー</th><th>操作</th><th>種別</th><th>対象</th><th>変更内容</th></tr></thead>
+    <tbody>
+      {% for log in page %}
+        <tr>
+          <td class="whitespace-nowrap">{{ log.timestamp|date:"Y/m/d H:i:s" }}</td>
+          <td>{{ log.user|default:"-" }}</td>
+          <td><span class="badge {% if log.action == 'delete' or log.action == 'cancel' %}badge-red{% elif log.action == 'create' or log.action == 'confirm' %}badge-green{% else %}badge-gray{% endif %}">{{ log.get_action_display }}</span></td>
+          <td class="whitespace-nowrap">{{ log.content_type.name|default:"" }}</td>
+          <td>{{ log.object_repr }}{% if log.note %}<div class="text-xs text-slate-500">{{ log.note }}</div>{% endif %}</td>
+          <td class="text-xs">
+            {% if log.changes %}
+              <details><summary class="cursor-pointer text-brand-600">{{ log.changes|length }}項目</summary>
+                <dl class="mt-1 space-y-0.5">{% for label, old, new in log.change_rows %}
+                  <div><dt class="inline font-medium">{{ label }}:</dt> <dd class="inline"><span class="text-red-600 line-through">{{ old|default_if_none:"" }}</span> → <span class="text-emerald-700">{{ new|default_if_none:"" }}</span></dd></div>
+                {% endfor %}</dl>
+              </details>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="py-8 text-center text-slate-500">ログがありません。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}

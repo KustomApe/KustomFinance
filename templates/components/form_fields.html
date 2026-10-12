@@ -1,0 +1,20 @@
+{% if form.non_field_errors %}
+  <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{{ form.non_field_errors }}</div>
+{% endif %}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+<div class="grid gap-4 {{ cols|default:'sm:grid-cols-2' }}">
+  {% for field in form.visible_fields %}
+    <div class="{% if field.field.widget.input_type == 'checkbox' %}flex items-center gap-2 pt-6{% endif %} {% if field.name in wide %}sm:col-span-2{% endif %}">
+      {% if field.field.widget.input_type == 'checkbox' %}
+        {{ field }} <label for="{{ field.id_for_label }}" class="text-sm">{{ field.label }}</label>
+      {% else %}
+        <label for="{{ field.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-700">
+          {{ field.label }}{% if field.field.required %}<span class="text-red-500"> *</span>{% endif %}
+        </label>
+        {{ field }}
+      {% endif %}
+      {% if field.help_text %}<p class="mt-1 text-xs text-slate-500">{{ field.help_text|safe }}</p>{% endif %}
+      {{ field.errors }}
+    </div>
+  {% endfor %}
+</div>

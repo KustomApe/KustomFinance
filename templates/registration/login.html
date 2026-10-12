@@ -1,0 +1,19 @@
+{% load static %}<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ログイン | KustomFinance</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="flex min-h-screen items-center justify-center bg-slate-100">
+  <form method="post" class="card card-body w-full max-w-sm space-y-4">
+    {% csrf_token %}
+    <h1 class="text-center text-2xl font-bold text-brand-900">KustomFinance</h1>
+    {% if form.errors %}<p class="rounded bg-red-50 px-3 py-2 text-sm text-red-700">ユーザー名またはパスワードが正しくありません。</p>{% endif %}
+    <div><label class="mb-1 block text-sm font-medium" for="id_username">ユーザー名</label>{{ form.username }}</div>
+    <div><label class="mb-1 block text-sm font-medium" for="id_password">パスワード</label>{{ form.password }}</div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-primary w-full justify-center">ログイン</button>
+  </form>
+</body>
+</html>

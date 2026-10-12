@@ -1,0 +1,60 @@
+{% load static ui %}<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} | KustomFinance</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  <script src="{% static 'vendor/alpine.min.js' %}" defer></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <div class="flex min-h-screen">
+    <aside class="w-56 shrink-0 bg-brand-900 text-slate-200 print:hidden">
+      <a href="{% url 'core:dashboard' %}" class="block px-5 py-4 text-lg font-bold text-white">KustomFinance</a>
+      <nav class="space-y-4 px-3 pb-6 text-sm">
+        {% nav_sections as sections %}
+        {% for section in sections %}
+          <div>
+            <div class="px-2 pb-1 text-xs font-semibold tracking-wider text-slate-400">{{ section.title }}</div>
+            {% for item in section.items %}
+              <a href="{{ item.href }}"
+                 class="block rounded px-2 py-1.5 {% if item.active %}bg-white/15 text-white{% else %}hover:bg-white/10{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </nav>
+    </aside>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header class="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 print:hidden">
+        <div class="text-sm text-slate-500">{{ company.name }}</div>
+        <div class="flex items-center gap-4 text-sm" x-data="{ open: false }">
+          <div class="relative">
+            <button class="flex items-center gap-1 hover:text-brand-600" @click="open = !open">
+              {{ request.user }} <span class="badge badge-gray">{{ request.user.get_role_display }}</span> ▾
+            </button>
+            <div x-show="open" @click.outside="open = false" x-cloak
+                 class="absolute right-0 z-10 mt-2 w-44 rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+              <a href="{% url 'accounts:password_change' %}" class="block px-4 py-2 hover:bg-slate-50">パスワード変更</a>
+              <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+                <button class="block w-full px-4 py-2 text-left hover:bg-slate-50">ログアウト</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main class="flex-1 p-6">
+        {% if messages %}
+          <div class="mb-4 space-y-2">
+            {% for message in messages %}
+              <div class="rounded-md border px-4 py-2 text-sm {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% elif message.tags == 'warning' %}border-amber-200 bg-amber-50 text-amber-800{% else %}border-emerald-200 bg-emerald-50 text-emerald-800{% endif %}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <style>[x-cloak]{display:none!important}</style>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}ユーザー{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">{% if object %}ユーザーの編集: {{ object.username }}{% else %}ユーザーの作成{% endif %}</h1>
+<form method="post" class="card card-body max-w-2xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" %}
+  <div class="mt-6 flex gap-2"><button class="btn btn-primary">保存</button><a class="btn" href="{% url 'accounts:users' %}">キャンセル</a></div>
+</form>
+{% endblock %}
