@@ -28,8 +28,8 @@ def customer(db):
     )
 
 
-def make_invoice(partner, lines, issue_date=D(2026, 5, 15)):
-    inv = Invoice(partner=partner, issue_date=issue_date, subject="テスト")
+def make_invoice(partner, lines, issue_date=None):
+    inv = Invoice(partner=partner, issue_date=issue_date or D(2026, 5, 15), subject="テスト")
     return save_document(inv, lines)
 
 
