@@ -1,0 +1,11 @@
+# 空の Issue も開けるようにしておく（どのひな形にも当てはまらない相談のため）
+blank_issues_enabled: true
+
+# 外部の窓口へ誘導したいときは contact_links を足します。
+# このリポジトリは Discussions を使っていないので、いまは空です。
+# 使うようになったら、下をそのまま有効にしてください。
+#
+# contact_links:
+#   - name: 使い方の質問・運用の相談
+#     url: https://github.com/KustomApe/KustomFinance/discussions
+#     about: バグや要望ではない相談はこちらへ
