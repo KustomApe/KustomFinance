@@ -3,7 +3,7 @@
 {% block content %}
 <div class="mb-6 flex items-center justify-between">
   <h1 class="page-title">総勘定元帳：{{ account.name }}{% if sub_account %} / {{ sub_account.name }}{% endif %}</h1>
-  <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+  <a class="btn" href="?{{ request.GET.urlencode }}&format=xlsx">Excel</a><a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV</a>
 </div>
 <form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm" method="get">
   <div><label class="mb-1 block">勘定科目</label>

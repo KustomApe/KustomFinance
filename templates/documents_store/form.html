@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}証憑の保存{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">{% if object %}証憑の情報を修正{% else %}証憑の保存{% endif %}</h1>
+<form method="post" enctype="multipart/form-data" class="card card-body max-w-3xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" with wide="title" %}
+  <p class="mt-4 text-xs text-slate-500">保存したファイルは差し替え・削除できません（SHA-256で改ざんを検知します）。誤って保存した場合は「無効」にして保存し直してください。情報の修正は履歴に残ります。</p>
+  <div class="mt-6 flex gap-2"><button class="btn btn-primary">保存</button><a class="btn" href="{% url 'documents:search' %}">キャンセル</a></div>
+</form>
+{% endblock %}

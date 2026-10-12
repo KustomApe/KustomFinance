@@ -4,7 +4,7 @@
 <div class="mb-6 flex items-center justify-between">
   <h1 class="page-title">仕訳帳</h1>
   <div class="flex gap-2">
-    <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+    <a class="btn" href="?{{ request.GET.urlencode }}&format=xlsx">Excel</a><a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV</a>
     {% if request.user|can:"ledger_edit" %}<a class="btn btn-primary" href="{% url 'ledger:journal_new' %}">＋ 仕訳入力</a>{% endif %}
   </div>
 </div>

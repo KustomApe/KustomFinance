@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}損益計算書{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">損益計算書</h1>
+  <div class="flex gap-2"><a class="btn" href="?{{ request.GET.urlencode }}&format=xlsx">Excel</a><a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV</a><button class="btn" onclick="window.print()">印刷</button></div>
+</div>
+<form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm print:hidden" method="get">
+  <div><label class="mb-1 block">期間</label><div class="flex items-center gap-1"><input type="date" class="input" name="date_from" value="{{ date_from|date:'Y-m-d' }}">〜<input type="date" class="input" name="date_to" value="{{ date_to|date:'Y-m-d' }}"></div></div>
+  <div><label class="mb-1 block">部門</label><select name="department" class="select"><option value="">全社</option>
+    {% for d in departments %}<option value="{{ d.pk }}" {% if d == department %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+  <label class="flex items-center gap-2 pb-2"><input type="checkbox" class="checkbox" name="compare" value="1" {% if compare %}checked{% endif %}>前年同期と比較</label>
+  <button class="btn">表示</button>
+</form>
+<div class="card max-w-3xl overflow-x-auto">
+  <div class="px-4 pt-4 text-center"><div class="font-bold">{{ company.name }}</div><div class="text-sm text-slate-500">{{ date_from|date:"Y年n月j日" }} 〜 {{ date_to|date:"Y年n月j日" }}{% if department %}（{{ department.name }}）{% endif %}（単位：円）</div></div>
+  <table class="table mt-2">
+    <thead><tr><th>科目</th><th class="text-right">金額</th>{% if compare %}<th class="text-right">前年同期</th>{% endif %}</tr></thead>
+    <tbody>{% include "reports/_lines.html" %}</tbody>
+  </table>
+</div>
+{% endblock %}

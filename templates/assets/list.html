@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}固定資産台帳{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">固定資産台帳</h1>
+  <div class="flex gap-2">
+    <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+    {% if request.user|can:"ledger_edit" %}<a class="btn" href="{% url 'assets:run' %}">減価償却の計上</a><a class="btn btn-primary" href="{% url 'assets:new' %}">＋ 資産を登録</a>{% endif %}
+  </div>
+</div>
+<form class="card card-body mb-4 flex items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">状態</label><select name="status" class="select" onchange="this.form.submit()"><option value="" {% if not status %}selected{% endif %}>すべて</option>
+    {% for v, l in statuses %}<option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+</form>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>資産番号</th><th>資産名</th><th>勘定科目</th><th>事業供用日</th><th>償却方法</th><th class="text-right">耐用年数</th><th class="text-right">取得価額</th><th class="text-right">帳簿価額</th><th>状態</th></tr></thead>
+    <tbody>
+      {% for a in assets %}
+        <tr><td><a class="link" href="{% url 'assets:detail' a.pk %}">{{ a.number }}</a></td><td>{{ a.name }}</td><td>{{ a.account.name }}</td>
+          <td>{{ a.service_date|date:"Y/m/d" }}</td><td>{{ a.get_method_display }}</td><td class="num">{{ a.useful_life|default:"" }}</td>
+          <td class="num">{{ a.acquisition_cost|yen }}</td><td class="num">{{ a.book_value|yen }}</td>
+          <td>{% if a.status == "active" %}<span class="badge badge-green">使用中</span>{% else %}<span class="badge badge-gray">除却済</span>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="9" class="py-8 text-center text-slate-500">固定資産は登録されていません。</td></tr>{% endfor %}
+    </tbody>
+    <tfoot><tr class="font-semibold"><td colspan="6" class="text-right">合計</td><td class="num">{{ total_cost|yen }}</td><td class="num">{{ total_book|yen }}</td><td></td></tr></tfoot>
+  </table>
+</div>
+<p class="mt-2 text-xs text-slate-500">減価償却は直接法（資産の勘定から直接減額）で計上します。償却率は<a class="link" href="{% url 'assets:rates' %}">償却率表</a>を参照します。</p>
+{% endblock %}

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load ui %}
 {% block title %}ダッシュボード{% endblock %}
 {% block content %}
 <h1 class="page-title mb-6">ダッシュボード</h1>
@@ -11,8 +11,28 @@
     </ul>
   </div>
 {% endif %}
-<div class="grid gap-4 sm:grid-cols-3">
-  <div class="card card-body"><div class="text-sm text-slate-500">会計期間</div>
-    <div class="mt-1 font-semibold">{{ fiscal_year|default:"未登録" }}</div></div>
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <a href="{% url 'reports:pl' %}" class="card card-body hover:border-brand-600"><div class="text-sm text-slate-500">今月の売上高</div><div class="mt-1 text-2xl font-bold tabular-nums">{{ month_sales|yen }}</div></a>
+  <a href="{% url 'reports:pl' %}" class="card card-body hover:border-brand-600"><div class="text-sm text-slate-500">今期の損益（期首から本日まで）</div><div class="mt-1 text-2xl font-bold tabular-nums {% if ytd_profit < 0 %}text-red-700{% endif %}">{{ ytd_profit|yen }}</div></a>
+  <a href="{% url 'banking:reconciliation' %}" class="card card-body hover:border-brand-600"><div class="text-sm text-slate-500">現金・預金</div><div class="mt-1 text-2xl font-bold tabular-nums">{{ cash|yen }}</div></a>
+  <a href="{% url 'sales:receivables' %}" class="card card-body hover:border-brand-600"><div class="text-sm text-slate-500">売掛金 / 買掛金</div><div class="mt-1 text-lg font-bold tabular-nums">{{ receivable|yen }} / {{ payable|yen }}</div></a>
+</div>
+<div class="mt-4 grid gap-4 sm:grid-cols-3">
+  <a href="{% url 'sales:receivables' %}" class="card card-body hover:border-brand-600 {% if overdue_count %}border-red-200 bg-red-50{% endif %}"><div class="text-sm text-slate-500">支払期日を過ぎた請求書</div><div class="mt-1 text-lg font-semibold">{{ overdue_count }}件 {% if overdue_total %}<span class="text-red-700">{{ overdue_total|yen }}円</span>{% endif %}</div></a>
+  <a href="{% url 'expenses:list' %}?tab=approval" class="card card-body hover:border-brand-600 {% if pending_expenses %}border-amber-200 bg-amber-50{% endif %}"><div class="text-sm text-slate-500">承認待ちの経費精算</div><div class="mt-1 text-lg font-semibold">{{ pending_expenses }}件</div></a>
+  <a href="{% url 'banking:transactions' %}" class="card card-body hover:border-brand-600 {% if unprocessed_bank %}border-amber-200 bg-amber-50{% endif %}"><div class="text-sm text-slate-500">未処理の銀行明細</div><div class="mt-1 text-lg font-semibold">{{ unprocessed_bank }}件</div></a>
+</div>
+<div class="card mt-6 overflow-x-auto">
+  <div class="px-4 pt-4 font-semibold">月次推移（直近12か月）</div>
+  <table class="table">
+    <thead><tr><th>月</th><th class="text-right">売上高</th><th class="w-1/2"></th><th class="text-right">損益</th></tr></thead>
+    <tbody>
+      {% for m in months %}
+        <tr><td>{{ m.month|date:"Y年n月" }}</td><td class="num">{{ m.sales|yen }}</td>
+          <td><div class="h-2.5 rounded-full bg-brand-600/80" style="width: {{ m.ratio }}%"></div></td>
+          <td class="num {% if m.profit < 0 %}text-red-700{% endif %}">{{ m.profit|yen }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

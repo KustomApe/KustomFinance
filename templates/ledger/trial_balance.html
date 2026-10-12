@@ -3,7 +3,7 @@
 {% block content %}
 <div class="mb-6 flex items-center justify-between">
   <h1 class="page-title">残高試算表</h1>
-  <a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>
+  <a class="btn" href="?{{ request.GET.urlencode }}&format=xlsx">Excel</a><a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV</a>
 </div>
 <form class="card card-body mb-4 flex flex-wrap items-end gap-3 text-sm print:hidden" method="get">
   {% include "components/period_filter.html" %}

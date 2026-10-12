@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}貸借対照表{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">貸借対照表</h1>
+  <div class="flex gap-2"><a class="btn" href="?{{ request.GET.urlencode }}&format=xlsx">Excel</a><a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV</a><button class="btn" onclick="window.print()">印刷</button></div>
+</div>
+<form class="card card-body mb-4 flex items-end gap-3 text-sm print:hidden" method="get">
+  <div><label class="mb-1 block">基準日</label><input type="date" class="input" name="as_of" value="{{ as_of|date:'Y-m-d' }}"></div>
+  <button class="btn">表示</button>
+</form>
+{% if not balanced %}<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">資産合計と負債・純資産合計が一致しません。開始残高などを確認してください。</div>{% endif %}
+<div class="mb-2 text-center"><div class="font-bold">{{ company.name }}</div><div class="text-sm text-slate-500">{{ as_of|date:"Y年n月j日" }} 現在（単位：円）</div></div>
+<div class="grid gap-4 lg:grid-cols-2">
+  <div class="card overflow-x-auto"><table class="table">{% include "reports/_lines.html" with lines=bs.assets %}</table></div>
+  <div class="card overflow-x-auto"><table class="table">{% include "reports/_lines.html" with lines=bs.liabilities %}</table></div>
+</div>
+{% endblock %}

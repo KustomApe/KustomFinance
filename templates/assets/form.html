@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}固定資産{% endblock %}
+{% block content %}
+<h1 class="page-title mb-6">{% if object %}固定資産の編集: {{ object.number }}{% else %}固定資産の登録{% endif %}</h1>
+<form method="post" class="card card-body max-w-4xl">
+  {% csrf_token %}
+  {% include "components/form_fields.html" with cols="sm:grid-cols-3" wide="notes" %}
+  <div class="mt-4 space-y-1 text-xs text-slate-500">
+    <p>・少額減価償却資産（30万円未満、中小企業者等の特例）は事業供用年度に全額を償却します。一括償却資産（20万円未満）は3年で均等に償却します（月割なし）。</p>
+    <p>・取得時の仕訳（工具器具備品 / 未払金 など）は、仕入請求書・仕訳入力で別途計上してください。台帳の登録だけでは仕訳は作られません。</p>
+    <p>・償却実績のある資産は、取得価額・償却方法などの計算の前提を変更できません。</p>
+  </div>
+  <div class="mt-6 flex gap-2"><button class="btn btn-primary">保存</button><a class="btn" href="{% if object %}{% url 'assets:detail' object.pk %}{% else %}{% url 'assets:list' %}{% endif %}">キャンセル</a></div>
+</form>
+{% endblock %}

@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts import roles
 from apps.accounts.permissions import require_capability
 from apps.audit.services import Action, record
-from apps.core.exports import csv_response
+from apps.core.exports import table_response
 from apps.core.models import Company, FiscalYear
 
 from .forms import (
@@ -179,7 +179,7 @@ def journal_list(request):
         ),
         "reversed_by",
     )
-    if request.GET.get("format") == "csv":
+    if request.GET.get("format") in ("csv", "xlsx"):
         rows = (
             [
                 j.date,
@@ -198,8 +198,9 @@ def journal_list(request):
             for j in journals
             for ln in j.lines.all()
         )
-        return csv_response(
-            f"仕訳帳_{date_from}_{date_to}.csv",
+        return table_response(
+            request.GET["format"],
+            f"仕訳帳_{date_from}_{date_to}",
             [
                 "日付",
                 "仕訳番号",
@@ -263,7 +264,7 @@ def journal_detail(request, pk):
 def trial_balance_view(request):
     period_form, date_from, date_to = _period(request)
     tb = trial_balance(date_from, date_to)
-    if request.GET.get("format") == "csv":
+    if request.GET.get("format") in ("csv", "xlsx"):
         rows = (
             [
                 r.account.code,
@@ -276,8 +277,9 @@ def trial_balance_view(request):
             ]
             for r in tb.rows
         )
-        return csv_response(
-            f"試算表_{date_from}_{date_to}.csv",
+        return table_response(
+            request.GET["format"],
+            f"試算表_{date_from}_{date_to}",
             ["科目コード", "勘定科目", "区分", "期首・繰越残高", "借方", "貸方", "期末残高"],
             rows,
         )
@@ -291,7 +293,7 @@ def general_ledger_view(request):
     account = accounts.filter(pk=request.GET.get("account") or 0).first() or Account.by_key("bank")
     sub_account = account.sub_accounts.filter(pk=request.GET.get("sub_account") or 0).first()
     opening, entries = general_ledger(account, date_from, date_to, sub_account)
-    if request.GET.get("format") == "csv":
+    if request.GET.get("format") in ("csv", "xlsx"):
         rows = [["", "", "前期・前月繰越", "", "", "", opening]] + [
             [
                 e.line.journal.date,
@@ -304,8 +306,9 @@ def general_ledger_view(request):
             ]
             for e in entries
         ]
-        return csv_response(
-            f"総勘定元帳_{account.name}_{date_from}_{date_to}.csv",
+        return table_response(
+            request.GET["format"],
+            f"総勘定元帳_{account.name}_{date_from}_{date_to}",
             ["日付", "仕訳番号", "摘要", "相手科目", "借方", "貸方", "残高"],
             rows,
         )

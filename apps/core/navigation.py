@@ -43,6 +43,13 @@ NAV = [
         ],
     },
     {
+        "title": "固定資産",
+        "items": [
+            {"label": "固定資産台帳", "url": "assets:list", "cap": roles.VIEW},
+            {"label": "減価償却の計上", "url": "assets:run", "cap": roles.LEDGER_EDIT},
+        ],
+    },
+    {
         "title": "会計",
         "items": [
             {"label": "仕訳入力", "url": "ledger:journal_new", "cap": roles.LEDGER_EDIT},
@@ -50,6 +57,15 @@ NAV = [
             {"label": "総勘定元帳", "url": "ledger:general_ledger", "cap": roles.VIEW},
             {"label": "試算表", "url": "ledger:trial_balance", "cap": roles.VIEW},
             {"label": "締め処理", "url": "ledger:period_close", "cap": roles.PERIOD_CLOSE},
+        ],
+    },
+    {
+        "title": "決算・帳票",
+        "items": [
+            {"label": "損益計算書", "url": "reports:pl", "cap": roles.VIEW},
+            {"label": "貸借対照表", "url": "reports:bs", "cap": roles.VIEW},
+            {"label": "消費税集計表", "url": "reports:tax", "cap": roles.VIEW},
+            {"label": "証憑の検索", "url": "documents:search", "cap": roles.VIEW},
         ],
     },
     {

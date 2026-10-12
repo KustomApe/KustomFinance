@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}消費税集計表{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">消費税集計表</h1>
+  <div class="flex gap-2"><a class="btn" href="?{{ request.GET.urlencode }}&format=xlsx">Excel</a><a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV</a></div>
+</div>
+<form class="card card-body mb-4 flex items-end gap-3 text-sm" method="get">
+  <div><label class="mb-1 block">課税期間</label><div class="flex items-center gap-1"><input type="date" class="input" name="date_from" value="{{ date_from|date:'Y-m-d' }}">〜<input type="date" class="input" name="date_to" value="{{ date_to|date:'Y-m-d' }}"></div></div>
+  <button class="btn">表示</button>
+</form>
+<p class="mb-4 text-sm text-amber-800">申告書作成の参考資料です（一般課税・税抜経理）。簡易課税・2割特例、課税売上割合95%未満の場合の按分、少額特例などは反映していません。申告前に税理士等にご確認ください。</p>
+<div class="grid gap-4 lg:grid-cols-2">
+  <div class="card overflow-x-auto">
+    <div class="px-4 pt-4 font-semibold">売上</div>
+    <table class="table"><thead><tr><th>税区分</th><th class="text-right">税抜</th><th class="text-right">消費税</th><th class="text-right">税込</th></tr></thead>
+      <tbody>{% for r in s.sales %}<tr><td>{{ r.category.name }}</td><td class="num">{{ r.base|yen }}</td><td class="num">{{ r.tax|yen }}</td><td class="num">{{ r.gross|yen }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-slate-500">ありません</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="card overflow-x-auto">
+    <div class="px-4 pt-4 font-semibold">仕入・経費</div>
+    <table class="table"><thead><tr><th>税区分</th><th class="text-right">税抜※</th><th class="text-right">控除対象税額</th><th class="text-right">支払額</th></tr></thead>
+      <tbody>{% for r in s.purchases %}<tr><td>{{ r.category.name }}</td><td class="num">{{ r.base|yen }}</td><td class="num">{{ r.tax|yen }}</td><td class="num">{{ r.gross|yen }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-slate-500">ありません</td></tr>{% endfor %}</tbody></table>
+    <p class="px-4 pb-3 text-xs text-slate-500">※経過措置等で控除できない税額は税抜金額に含みます。</p>
+  </div>
+</div>
+<div class="card card-body mt-4 max-w-3xl text-sm">
+  <h2 class="mb-3 font-semibold">集計</h2>
+  <table class="w-full">
+    <tr><td class="py-1 text-slate-600">課税売上高（税抜）</td><td class="num">{{ s.taxable_sales|yen }}</td></tr>
+    <tr><td class="py-1 text-slate-600">免税売上高（輸出）</td><td class="num">{{ s.export_sales|yen }}</td></tr>
+    <tr><td class="py-1 text-slate-600">非課税売上高</td><td class="num">{{ s.exempt_sales|yen }}</td></tr>
+    <tr><td class="py-1 text-slate-600">課税売上割合</td><td class="num">{% if s.taxable_sales_ratio is not None %}{{ s.taxable_sales_ratio|floatformat:4 }}{% else %}-{% endif %}</td></tr>
+    {% for rate, v in s.sales_tax_by_rate.items %}
+      <tr><td class="py-1 text-slate-600">{{ rate }}%：課税標準額（税込 {{ v.0|yen }} ×100/{{ rate|add:100 }}、千円未満切捨て）／国税 {{ v.2 }}%</td><td class="num">{{ v.1|yen }}</td></tr>
+    {% endfor %}
+    <tr class="border-t border-slate-200"><td class="py-1 font-semibold">売上に係る消費税額（積上げ・仮受消費税）</td><td class="num font-semibold">{{ s.sales_tax|yen }}</td></tr>
+    <tr><td class="py-1 font-semibold">仕入に係る消費税額（積上げ・仮払消費税）</td><td class="num font-semibold">{{ s.purchase_tax|yen }}</td></tr>
+    <tr class="border-t border-slate-300"><td class="py-2 font-bold">差引（参考）</td><td class="num text-lg font-bold">{{ s.net_tax|yen }}</td></tr>
+  </table>
+</div>
+{% endblock %}

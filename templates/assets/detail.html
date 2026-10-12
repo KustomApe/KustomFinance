@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}固定資産 {{ asset.number }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">{{ asset.number }} {{ asset.name }} {% if asset.status == "disposed" %}<span class="badge badge-gray">除却済</span>{% endif %}</h1>
+  <div class="flex gap-2"><a class="btn" href="{% url 'assets:list' %}">一覧へ</a>{% if request.user|can:"ledger_edit" %}<a class="btn" href="{% url 'assets:edit' asset.pk %}">編集</a>{% endif %}</div>
+</div>
+<div class="card card-body mb-4 grid gap-3 text-sm sm:grid-cols-4">
+  <div><div class="text-slate-500">勘定科目</div>{{ asset.account.name }}</div>
+  <div><div class="text-slate-500">償却方法</div>{{ asset.get_method_display }}{% if asset.useful_life %}（{{ asset.useful_life }}年）{% endif %}</div>
+  <div><div class="text-slate-500">取得日 / 事業供用日</div>{{ asset.acquisition_date|date:"Y/m/d" }} / {{ asset.service_date|date:"Y/m/d" }}</div>
+  <div><div class="text-slate-500">取得価額 / 帳簿価額</div><span class="font-semibold">{{ asset.acquisition_cost|yen }} / {{ asset.book_value|yen }}</span></div>
+  {% if asset.opening_accumulated %}<div><div class="text-slate-500">移行時の償却累計額</div>{{ asset.opening_accumulated|yen }}（{{ asset.opening_date|date:"Y/m/d" }}）</div>{% endif %}
+  {% if asset.revised_base %}<div><div class="text-slate-500">改定取得価額</div>{{ asset.revised_base|yen }}</div>{% endif %}
+  <div><div class="text-slate-500">部門 / 設置場所</div>{{ asset.department|default:"-" }} / {{ asset.location|default:"-" }}</div>
+  {% if asset.disposal_journal %}<div><div class="text-slate-500">除却仕訳</div><a class="link" href="{% url 'ledger:journal_detail' asset.disposal_journal_id %}">{{ asset.disposal_journal.number }}</a></div>{% endif %}
+</div>
+<div class="grid gap-4 lg:grid-cols-2">
+  <div class="card overflow-x-auto">
+    <div class="px-4 pt-4 font-semibold">償却予定</div>
+    <table class="table">
+      <thead><tr><th>事業年度</th><th class="text-right">月数</th><th class="text-right">期首帳簿価額</th><th class="text-right">償却額</th><th class="text-right">期末帳簿価額</th></tr></thead>
+      <tbody>{% for p in schedule %}<tr><td>{{ p.fy_start|date:"Y/m" }}〜{{ p.fy_end|date:"Y/m" }}</td><td class="num">{{ p.service_months }}</td><td class="num">{{ p.opening_book_value|yen }}</td><td class="num">{{ p.amount|yen }}</td><td class="num">{{ p.closing_book_value|yen }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <div class="card overflow-x-auto">
+    <div class="px-4 pt-4 font-semibold">償却実績</div>
+    <table class="table">
+      <thead><tr><th>計上日</th><th class="text-right">償却額</th><th>仕訳</th></tr></thead>
+      <tbody>{% for e in entries %}<tr><td>{{ e.date|date:"Y/m/d" }}</td><td class="num">{{ e.amount|yen }}</td><td><a class="link" href="{% url 'ledger:journal_detail' e.journal_id %}">{{ e.journal.number }}</a></td></tr>
+        {% empty %}<tr><td colspan="3" class="text-slate-500">まだ計上されていません。</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% if asset.status == "active" and request.user|can:"ledger_edit" %}
+  <form method="post" class="card card-body mt-6 max-w-2xl" x-data="{ open: false }">
+    {% csrf_token %}
+    <button type="button" class="link text-left text-sm" @click="open = !open">この資産を除却する</button>
+    <div x-show="open" x-cloak class="mt-3">
+      <p class="mb-3 text-sm text-slate-600">除却月までの減価償却費を計上し、残りの帳簿価額を固定資産除却損に振り替えます。売却の場合は仕訳入力で売却損益を計上してください。</p>
+      {% include "components/form_fields.html" with form=dispose_form %}
+      <button class="btn btn-danger mt-3">除却する</button>
+    </div>
+  </form>
+{% endif %}
+{% endblock %}

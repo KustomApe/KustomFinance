@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}証憑{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">{{ doc.get_kind_display }} {{ doc.title }} {% if doc.is_void %}<span class="badge badge-red">無効</span>{% endif %}</h1>
+  <div class="flex gap-2"><a class="btn" href="{% url 'documents:search' %}">検索へ</a><a class="btn" href="{% url 'documents:file' doc.pk %}" target="_blank">ファイルを表示</a>
+    {% if request.user|can:"sales_edit" and not doc.is_void %}<a class="btn" href="{% url 'documents:edit' doc.pk %}">情報を修正</a>{% endif %}</div>
+</div>
+{% if doc.is_void %}<div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">無効にした理由: {{ doc.void_reason }}</div>{% endif %}
+<div class="card card-body mb-4 text-sm">
+  <dl class="grid grid-cols-[10rem_1fr] gap-y-2">
+    <dt class="text-slate-500">取引年月日</dt><dd>{{ doc.transaction_date|date:"Y/m/d" }}</dd>
+    <dt class="text-slate-500">取引金額</dt><dd>{{ doc.amount|yen }}円</dd>
+    <dt class="text-slate-500">取引先</dt><dd>{{ doc.display_partner }}</dd>
+    <dt class="text-slate-500">受領方法</dt><dd>{{ doc.get_source_display }}</dd>
+    <dt class="text-slate-500">登録</dt><dd>{{ doc.created_at|date:"Y/m/d H:i" }} {{ doc.uploaded_by|default:"" }}</dd>
+    <dt class="text-slate-500">SHA-256</dt><dd class="break-all font-mono text-xs">{{ doc.file_sha256 }}</dd>
+  </dl>
+</div>
+<div class="card card-body mb-4 text-sm">
+  <h2 class="mb-2 font-semibold">訂正・削除の履歴</h2>
+  {% for log in history %}<div class="border-b border-slate-100 py-1">{{ log.timestamp|date:"Y/m/d H:i" }} {{ log.user|default:"" }} {{ log.get_action_display }}{% if log.note %} — {{ log.note }}{% endif %}
+    {% for label, old, new in log.change_rows %}{% if log.action == "update" %}<div class="pl-4 text-xs text-slate-600">{{ label }}: {{ old|default_if_none:"" }} → {{ new|default_if_none:"" }}</div>{% endif %}{% endfor %}</div>{% endfor %}
+</div>
+{% if not doc.is_void and request.user|can:"ledger_edit" %}
+  <form method="post" class="card card-body max-w-xl space-y-3" x-data="{ open: false }">{% csrf_token %}
+    <button type="button" class="link text-left text-sm" @click="open = !open">この証憑を無効にする</button>
+    <div x-show="open" x-cloak class="space-y-3"><input class="input" name="reason" required maxlength="200" placeholder="無効にする理由"><button class="btn btn-danger">無効にする</button></div>
+  </form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}償却率表{% endblock %}
+{% block content %}
+<h1 class="page-title mb-2">償却率表</h1>
+<p class="mb-4 text-sm text-amber-800">初期値は計算式から求めた値です。国税庁「減価償却資産の償却率等表」と照合し、異なる場合は管理画面（/admin/）で修正してください。</p>
+<div class="card overflow-x-auto max-w-3xl">
+  <table class="table">
+    <thead><tr><th class="text-right">耐用年数</th><th class="text-right">定額法</th><th class="text-right">定率法</th><th class="text-right">改定償却率</th><th class="text-right">保証率</th></tr></thead>
+    <tbody>{% for r in rates %}<tr><td class="num">{{ r.useful_life }}年</td><td class="num">{{ r.straight_line_rate }}</td><td class="num">{{ r.declining_rate }}</td><td class="num">{{ r.revised_rate }}</td><td class="num">{{ r.guarantee_rate }}</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

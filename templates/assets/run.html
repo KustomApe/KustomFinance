@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}減価償却の計上{% endblock %}
+{% block content %}
+<h1 class="page-title mb-2">減価償却の計上</h1>
+<p class="mb-4 text-sm text-slate-500">指定した月末までの償却額（月割）を計算し、計上済みの額との差額を「減価償却費 / 各資産科目」で計上します。毎月実行しても、決算時にまとめて実行しても同じ結果になります。</p>
+<form method="get" class="card card-body mb-4 flex items-end gap-3 text-sm">
+  <div>{{ form.through.label_tag }}{{ form.through }}</div>
+  <button class="btn">計算する</button>
+</form>
+{% if through %}
+  <div class="card overflow-x-auto">
+    <table class="table">
+      <thead><tr><th>資産</th><th>償却方法</th><th class="text-right">期首帳簿価額</th><th class="text-right">年間償却額</th><th class="text-right">{{ through|date:"Y/m" }}までの累計</th><th class="text-right">計上済</th><th class="text-right">今回計上</th></tr></thead>
+      <tbody>
+        {% for r in rows %}<tr><td><a class="link" href="{% url 'assets:detail' r.asset.pk %}">{{ r.asset }}</a></td><td>{{ r.asset.get_method_display }}</td>
+          <td class="num">{{ r.plan.opening_book_value|yen }}</td><td class="num">{{ r.plan.amount|yen }}</td><td class="num">{{ r.target|yen }}</td><td class="num">{{ r.posted|yen }}</td><td class="num font-semibold">{{ r.amount|yen }}</td></tr>
+        {% empty %}<tr><td colspan="7" class="py-6 text-center text-slate-500">対象の資産はありません。</td></tr>{% endfor %}
+      </tbody>
+      <tfoot><tr class="font-bold"><td colspan="6" class="text-right">今回計上額 合計</td><td class="num">{{ total|yen }}</td></tr></tfoot>
+    </table>
+  </div>
+  {% if total %}
+    <form method="post" class="mt-4">{% csrf_token %}<input type="hidden" name="through" value="{{ through|date:'Y-m-d' }}"><button class="btn btn-primary">{{ through|date:"Y年n月" }}までの減価償却費 {{ total|yen }}円を計上する</button></form>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load ui %}
+{% block title %}証憑の検索{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+  <h1 class="page-title">証憑の検索</h1>
+  <div class="flex gap-2">
+    {% if hits %}<a class="btn" href="?{{ request.GET.urlencode }}&format=csv">CSV出力</a>{% endif %}
+    {% if request.user|can:"sales_edit" %}<a class="btn btn-primary" href="{% url 'documents:new' %}">＋ 証憑を保存</a>{% endif %}
+  </div>
+</div>
+<form method="get" class="card card-body mb-4">
+  {% include "components/form_fields.html" with cols="sm:grid-cols-3" %}
+  <div class="mt-4"><button class="btn btn-primary" name="go" value="1">検索</button></div>
+  <p class="mt-2 text-xs text-slate-500">取引年月日・取引金額は範囲で、取引先と組み合わせて検索できます。保存した証憑・発行した帳票（発行時PDF）・受領した請求書・経費の領収書を対象にします。</p>
+</form>
+{% if form.is_bound %}
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>書類</th><th>取引年月日</th><th class="text-right">取引金額</th><th>取引先</th><th>件名</th><th>番号</th><th>ファイル</th></tr></thead>
+    <tbody>
+      {% for h in hits %}
+        <tr class="{% if h.void %}text-slate-400 line-through{% endif %}">
+          <td class="whitespace-nowrap">{{ h.kind }}</td><td class="whitespace-nowrap">{{ h.date|date:"Y/m/d" }}</td><td class="num">{{ h.amount|yen }}</td>
+          <td>{{ h.partner }}</td><td><a class="link" href="{{ h.detail_url }}">{{ h.title|default:"（件名なし）" }}</a></td><td class="whitespace-nowrap">{{ h.number }}</td>
+          <td><a class="link" href="{{ h.file_url }}" target="_blank">表示</a></td>
+        </tr>
+      {% empty %}<tr><td colspan="7" class="py-8 text-center text-slate-500">該当する証憑はありません。</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

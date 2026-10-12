@@ -1,0 +1,8 @@
+{% load ui %}
+{% for ln in lines %}
+  <tr class="{% if ln.level == 0 and ln.amount %}border-t border-slate-300 bg-slate-50 font-bold{% elif ln.bold %}font-semibold{% endif %}">
+    <td style="padding-left: {% if ln.level == 2 %}2.5rem{% elif ln.level == 1 %}1.5rem{% else %}0.75rem{% endif %}">{{ ln.label }}</td>
+    <td class="num">{% if ln.level == 2 or ln.amount or ln.level == 0 and not ln.bold %}{{ ln.amount|yen }}{% elif ln.level == 1 and not ln.bold %}{{ ln.amount|yen }}{% endif %}</td>
+    {% if compare %}<td class="num text-slate-500">{% if ln.compare is not None %}{{ ln.compare|yen }}{% endif %}</td>{% endif %}
+  </tr>
+{% endfor %}
