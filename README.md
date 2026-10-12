@@ -245,8 +245,10 @@ Docker の場合は DB コンテナの pg_dump を使います: `docker compose 
 
 ## 未対応・今後の課題
 
-- 少額特例（1万円未満の仕入）、簡易課税・2割特例、課税売上割合95%未満の按分計算
-- 全銀協フォーマットの明細取込・総合振込データの作成
-- 固定資産の売却（除却のみ対応。売却損益は仕訳入力で計上）
-- 給与計算・源泉徴収・年末調整
-- HTTPS（社内LAN向けにHTTPで動作。必要に応じてリバースプロキシでTLS終端）
+未対応の機能は [GitHub の Issue](https://github.com/KustomApe/KustomFinance/issues) で管理しています（書き方は [docs/issue.md](docs/issue.md)）。
+
+| 種類 | 主なもの |
+| --- | --- |
+| 法令・税制対応（[`compliance`](https://github.com/KustomApe/KustomFinance/labels/compliance)） | 償却率表の照合 #1、少額特例 #2、簡易課税・2割特例 #3、仕入税額の按分 #4、消費税申告書 #5、消費税の整理仕訳 #6、源泉徴収 #7、償却資産申告 #8、スキャナ保存の要件 #9、デジタルインボイス #10 |
+| 機能（[`enhancement`](https://github.com/KustomApe/KustomFinance/labels/enhancement)） | 他ソフトからの移行 #11、仕訳入力の部門・取引先 #12、開始残高の前受金の充当 #13、全銀協の明細取込 #14、総合振込データ #15、経費精算と出金の照合 #16、固定資産の売却 #17、給与 #18、請求書のメール送信 #19、定期請求 #20、受注残 #21、在庫 #22、予実対比 #23、スマホ対応 #24、PDFのOCR #25、二要素認証 #26 |
+| 保守（[`chore`](https://github.com/KustomApe/KustomFinance/labels/chore)） | Docker 構成の動作確認 #27、HTTPS 化 #28、Makefile の Linux 対応 #29、CI #30 |
